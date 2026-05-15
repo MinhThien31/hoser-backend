@@ -4,6 +4,7 @@ package com.minhthien.hoser_backend.service.impl;
 import com.minhthien.hoser_backend.dto.request.UpdatePasswordRequest;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.entity.User;
+import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.exception.BadRequestException;
 import com.minhthien.hoser_backend.exception.ResourceNotFoundException;
 import com.minhthien.hoser_backend.repository.UserRepository;
@@ -72,6 +73,33 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         user.setActive(active);
+        return mapToResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse selectRole(Long userId, UserRole role) {
+        if (role == UserRole.ADMIN) {
+            throw new BadRequestException("Admin role can only be assigned by admin");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        if (user.getRole() != UserRole.USER) {
+            throw new BadRequestException("Role already selected");
+        }
+
+        user.setRole(role);
+        return mapToResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateUserRole(Long userId, UserRole role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        user.setRole(role);
         return mapToResponse(userRepository.save(user));
     }
 

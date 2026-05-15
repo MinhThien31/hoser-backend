@@ -4,11 +4,14 @@ import com.minhthien.hoser_backend.dto.request.*;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.AuthResponse;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
+import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.service.AuthService;
+import com.minhthien.hoser_backend.service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
@@ -39,6 +43,15 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(ApiResponse.success(authService.getCurrentUser(userDetails.getUsername())));
+    }
+
+    @SecurityRequirement(name = "bearerAuth")
+    @PutMapping("/me/role")
+    public ResponseEntity<ApiResponse<UserResponse>> selectRole(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UserRoleRequest request) {
+        UserResponse response = userService.selectRole(currentUser.getId(), request.getRole());
+        return ResponseEntity.ok(ApiResponse.success("Role selected", response));
     }
 
     @SecurityRequirement(name = "bearerAuth")

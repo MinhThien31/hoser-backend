@@ -1,6 +1,7 @@
 package com.minhthien.hoser_backend.controller;
 
 import com.minhthien.hoser_backend.dto.request.UpdatePasswordRequest;
+import com.minhthien.hoser_backend.dto.request.UserRoleRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.entity.User;
@@ -13,19 +14,19 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
 
-    @GetMapping("/{id}")
+    @GetMapping("/users/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(userService.getUserById(id)));
     }
 
-    @PutMapping("/password")
+    @PutMapping("/users/password")
     public ResponseEntity<ApiResponse<Void>> updatePassword(
             @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody UpdatePasswordRequest request) {
@@ -33,25 +34,33 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Password updated", null));
     }
 
-    @PutMapping("/deactivate")
+    @PutMapping("/users/deactivate")
     public ResponseEntity<ApiResponse<Void>> deactivate(@AuthenticationPrincipal User currentUser) {
         userService.deactivateAccount(currentUser.getId());
         return ResponseEntity.ok(ApiResponse.success("Account deactivated", null));
     }
 
-    @PutMapping("/activate/{userId}")
+    @PutMapping("/users/activate/{userId}")
     public ResponseEntity<ApiResponse<Void>> activateAccount(@PathVariable Long userId) {
         userService.activateAccount(userId);
         return ResponseEntity.ok(ApiResponse.success("Account activated", null));
     }
 
-    @PutMapping("/{userId}/status")
+    @PutMapping("/users/{userId}/status")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
             @PathVariable Long userId,
             @RequestParam boolean active) {
 
         UserResponse response = userService.updateUserStatus(userId, active);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("/admin/users/{userId}/role")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUserRole(
+            @PathVariable Long userId,
+            @Valid @RequestBody UserRoleRequest request) {
+        UserResponse response = userService.updateUserRole(userId, request.getRole());
+        return ResponseEntity.ok(ApiResponse.success("User role updated", response));
     }
 }
 
