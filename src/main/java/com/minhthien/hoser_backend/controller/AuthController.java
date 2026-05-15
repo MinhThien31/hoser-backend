@@ -55,6 +55,15 @@ public class AuthController {
     }
 
     @SecurityRequirement(name = "bearerAuth")
+    @PutMapping("/password")
+    public ResponseEntity<ApiResponse<Void>> updatePassword(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UpdatePasswordRequest request) {
+        userService.updatePassword(currentUser.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success("Password updated", null));
+    }
+
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout() {
         SecurityContextHolder.clearContext();

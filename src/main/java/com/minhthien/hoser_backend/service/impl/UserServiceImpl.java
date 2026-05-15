@@ -42,8 +42,14 @@ public class UserServiceImpl implements UserService {
     public void updatePassword(Long userId, UpdatePasswordRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new BadRequestException("Password login is not enabled for this account");
+        }
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new BadRequestException("Current password is incorrect");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BadRequestException("New password must be different from current password");
         }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);

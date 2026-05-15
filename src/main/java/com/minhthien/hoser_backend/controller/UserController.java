@@ -1,6 +1,5 @@
 package com.minhthien.hoser_backend.controller;
 
-import com.minhthien.hoser_backend.dto.request.UpdatePasswordRequest;
 import com.minhthien.hoser_backend.dto.request.UserRoleRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
@@ -24,14 +23,6 @@ public class UserController {
     @GetMapping("/users/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(userService.getUserById(id)));
-    }
-
-    @PutMapping("/users/password")
-    public ResponseEntity<ApiResponse<Void>> updatePassword(
-            @AuthenticationPrincipal User currentUser,
-            @Valid @RequestBody UpdatePasswordRequest request) {
-        userService.updatePassword(currentUser.getId(), request);
-        return ResponseEntity.ok(ApiResponse.success("Password updated", null));
     }
 
     @PutMapping("/users/deactivate")
