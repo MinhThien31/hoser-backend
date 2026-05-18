@@ -114,6 +114,30 @@ class WalletControllerSecurityTest {
     }
 
     @Test
+    void normalUserCannotGetAdminPaymentCallbackLogs() throws Exception {
+        User user = createUser("not-admin-callback-log", "not-admin-callback-log@example.com", UserRole.USER);
+        String token = jwtTokenProvider.generateTokenFromUsername(user.getUsername());
+
+        mockMvc.perform(get("/api/v1/admin/payment-callback-logs")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Access denied")));
+    }
+
+    @Test
+    void normalUserCannotGetAdminAuditLogs() throws Exception {
+        User user = createUser("not-admin-audit-log", "not-admin-audit-log@example.com", UserRole.USER);
+        String token = jwtTokenProvider.generateTokenFromUsername(user.getUsername());
+
+        mockMvc.perform(get("/api/v1/admin/audit-logs")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Access denied")));
+    }
+
+    @Test
     void anonymousUserGetsConsistentUnauthorizedResponse() throws Exception {
         mockMvc.perform(get("/api/v1/wallets/me"))
                 .andExpect(status().isUnauthorized())
@@ -153,6 +177,30 @@ class WalletControllerSecurityTest {
                 .andExpect(jsonPath("$.data.ownerType", is("ADMIN")))
                 .andExpect(jsonPath("$.data.userId").doesNotExist())
                 .andExpect(jsonPath("$.data.currency", is("VND")));
+    }
+
+    @Test
+    void adminCanGetAdminPaymentCallbackLogs() throws Exception {
+        User admin = createUser("callback-log-admin", "callback-log-admin@example.com", UserRole.ADMIN);
+        String token = jwtTokenProvider.generateTokenFromUsername(admin.getUsername());
+
+        mockMvc.perform(get("/api/v1/admin/payment-callback-logs")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void adminCanGetAdminAuditLogs() throws Exception {
+        User admin = createUser("audit-log-admin", "audit-log-admin@example.com", UserRole.ADMIN);
+        String token = jwtTokenProvider.generateTokenFromUsername(admin.getUsername());
+
+        mockMvc.perform(get("/api/v1/admin/audit-logs")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(0)));
     }
 
     private User createUser(String username, String email, UserRole role) {
