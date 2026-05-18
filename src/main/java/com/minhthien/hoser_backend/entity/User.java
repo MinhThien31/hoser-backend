@@ -58,6 +58,43 @@ public class User implements UserDetails
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @Column(length = 100)
+    @Builder.Default
+    private String createdBy = "SYSTEM";
+
+    @Column(length = 100)
+    @Builder.Default
+    private String updatedBy = "SYSTEM";
+
+    @PrePersist
+    void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+        if (createdBy == null || createdBy.isBlank()) {
+            createdBy = "SYSTEM";
+        }
+        if (updatedBy == null || updatedBy.isBlank()) {
+            updatedBy = createdBy;
+        }
+        if (active == null) {
+            active = true;
+        }
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
+        if (updatedBy == null || updatedBy.isBlank()) {
+            updatedBy = "SYSTEM";
+        }
+    }
+
     // UserDetails methods
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -19,6 +19,7 @@ import com.minhthien.hoser_backend.repository.UserRepository;
 import com.minhthien.hoser_backend.security.JwtTokenProvider;
 import com.minhthien.hoser_backend.service.AuthService;
 import com.minhthien.hoser_backend.service.MailService;
+import com.minhthien.hoser_backend.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -45,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final PasswordResetOtpRepository otpRepository;
     private final MailService mailService;
+    private final WalletService walletService;
 
     @Value("${google.client-id}")
     private String googleClientId;
@@ -69,6 +71,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         user = userRepository.save(user);
+        walletService.getOrCreateUserWallet(user.getId());
         String token = jwtTokenProvider.generateTokenFromUsername(user.getUsername());
         return buildAuthResponse(user, token);
     }
@@ -242,6 +245,7 @@ public class AuthServiceImpl implements AuthService {
                 .active(user.getActive())
                 .avatarUrl(user.getAvatarUrl())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
 }

@@ -20,5 +20,6 @@ public class UserResponse {
     private Boolean active;
     private String avatarUrl;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
 
