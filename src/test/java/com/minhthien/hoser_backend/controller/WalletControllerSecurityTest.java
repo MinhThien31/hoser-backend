@@ -138,11 +138,47 @@ class WalletControllerSecurityTest {
     }
 
     @Test
+    void normalUserCannotGetAdminFinanceSettings() throws Exception {
+        User user = createUser("not-admin-finance", "not-admin-finance@example.com", UserRole.USER);
+        String token = jwtTokenProvider.generateTokenFromUsername(user.getUsername());
+
+        mockMvc.perform(get("/api/v1/admin/finance-settings")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Access denied")));
+    }
+
+    @Test
     void anonymousUserGetsConsistentUnauthorizedResponse() throws Exception {
         mockMvc.perform(get("/api/v1/wallets/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Unauthorized")));
+    }
+
+    @Test
+    void anonymousUserCanGetApprovedHorses() throws Exception {
+        mockMvc.perform(get("/api/v1/horses/approved"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void anonymousUserCanGetAvailableJockeys() throws Exception {
+        mockMvc.perform(get("/api/v1/jockeys/available"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void anonymousUserCanReachApprovedJockeyProfileEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/jockeys/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", containsString("JockeyProfile not found")));
     }
 
     @Test
@@ -201,6 +237,31 @@ class WalletControllerSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void adminCanGetAndUpdateFinanceSettings() throws Exception {
+        User admin = createUser("finance-admin", "finance-admin@example.com", UserRole.ADMIN);
+        String token = jwtTokenProvider.generateTokenFromUsername(admin.getUsername());
+
+        mockMvc.perform(get("/api/v1/admin/finance-settings")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.jockeyHireTaxPercent").exists());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                                "/api/v1/admin/finance-settings")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "jockeyHireTaxPercent": 12.5
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.jockeyHireTaxPercent", is(12.5)));
     }
 
     private User createUser(String username, String email, UserRole role) {
