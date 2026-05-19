@@ -29,6 +29,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -131,6 +132,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse loginGoogle(String idToken) {
+        if (!StringUtils.hasText(idToken)) {
+            throw new BadRequestException("Google token is required");
+        }
         try {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(),
@@ -167,13 +171,18 @@ public class AuthServiceImpl implements AuthService {
                     .email(user.getEmail())
                     .role(user.getRole())
                     .build();
+        } catch (BadRequestException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Google login failed");
+            throw new BadRequestException("Invalid Google token");
         }
     }
 
     @Override
     public AuthResponse loginFacebook(String accessToken) {
+        if (!StringUtils.hasText(accessToken)) {
+            throw new BadRequestException("Facebook access token is required");
+        }
         try {
             String url = "https://graph.facebook.com/me?fields=id,name,email,picture&access_token=" + accessToken;
             RestTemplate restTemplate = new RestTemplate();
@@ -211,8 +220,10 @@ public class AuthServiceImpl implements AuthService {
                     .email(user.getEmail())
                     .role(user.getRole())
                     .build();
+        } catch (BadRequestException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Facebook login failed");
+            throw new BadRequestException("Invalid Facebook token");
         }
     }
 
