@@ -61,6 +61,8 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public PaymentOrderResponse createDepositOrder(Long userId, CreateDepositOrderRequest request) {
         validateAmount(request.getAmount());
+        validateCurrency(request.getCurrency());
+        PaymentProvider provider = resolveProvider(request.getProvider());
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         String referenceCode = "DEP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
@@ -69,7 +71,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .user(user)
                 .amount(request.getAmount())
                 .currency(PaymentOrder.DEFAULT_CURRENCY)
-                .provider(PaymentProvider.PAYOS)
+                .provider(provider)
                 .status(PaymentOrderStatus.PENDING)
                 .referenceCode(referenceCode)
                 .transferContent("HORSE " + referenceCode)
@@ -106,10 +108,26 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
+    public PaymentOrderResponse getUserDepositOrder(Long userId, Long orderId) {
+        return paymentOrderRepository.findByIdAndUserId(orderId, userId)
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentOrder", "id", orderId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PaymentOrderResponse> getAdminPaymentOrders() {
         return paymentOrderRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentOrderResponse getAdminPaymentOrder(Long orderId) {
+        return paymentOrderRepository.findById(orderId)
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentOrder", "id", orderId));
     }
 
     @Override
@@ -229,6 +247,23 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (ArithmeticException ex) {
             throw new BadRequestException("Amount must be a whole VND amount");
         }
+    }
+
+    private void validateCurrency(String currency) {
+        if (currency != null && !currency.isBlank()
+                && !PaymentOrder.DEFAULT_CURRENCY.equalsIgnoreCase(currency)) {
+            throw new BadRequestException("Only VND currency is supported");
+        }
+    }
+
+    private PaymentProvider resolveProvider(PaymentProvider provider) {
+        if (provider == null) {
+            return PaymentProvider.PAYOS;
+        }
+        if (provider != PaymentProvider.PAYOS) {
+            throw new BadRequestException("Only PAYOS provider is supported");
+        }
+        return provider;
     }
 
     private boolean isValidCallbackToken(String token) {

@@ -18,6 +18,9 @@ public interface PaymentOrderRepository extends JpaRepository<PaymentOrder, Long
     Optional<PaymentOrder> findByPaymentLinkId(String paymentLinkId);
 
     @EntityGraph(attributePaths = "user")
+    Optional<PaymentOrder> findByIdAndUserId(Long id, Long userId);
+
+    @EntityGraph(attributePaths = "user")
     List<PaymentOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<PaymentOrder> findByStatusOrderByCreatedAtDesc(PaymentOrderStatus status);

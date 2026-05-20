@@ -1,15 +1,20 @@
 package com.minhthien.hoser_backend.controller;
 
+import com.minhthien.hoser_backend.dto.request.UserProfileRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.entity.User;
+import com.minhthien.hoser_backend.exception.UnauthorizedException;
 import com.minhthien.hoser_backend.service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,9 +31,35 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getCurrentUser(currentUser.getId())));
     }
 
+    @GetMapping("/me/profile")
+    public ResponseEntity<ApiResponse<UserResponse>> getMyProfile(@AuthenticationPrincipal User currentUser) {
+        requireAuthenticated(currentUser);
+        return ResponseEntity.ok(ApiResponse.success(userService.getCurrentUser(currentUser.getId())));
+    }
+
+    @PutMapping("/me/profile")
+    public ResponseEntity<ApiResponse<UserResponse>> updateMyProfile(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UserProfileRequest request) {
+        requireAuthenticated(currentUser);
+        return ResponseEntity.ok(ApiResponse.success("Profile updated",
+                userService.updateProfile(currentUser.getId(), request)));
+    }
+
+    @GetMapping("/{id}/profile")
+    public ResponseEntity<ApiResponse<UserResponse>> getPublicProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getPublicProfile(id)));
+    }
+
     @PutMapping("/me/deactivate")
     public ResponseEntity<ApiResponse<Void>> deactivateMe(@AuthenticationPrincipal User currentUser) {
         userService.deactivateAccount(currentUser.getId());
         return ResponseEntity.ok(ApiResponse.success("Account deactivated", null));
+    }
+
+    private void requireAuthenticated(User currentUser) {
+        if (currentUser == null) {
+            throw new UnauthorizedException("Authentication is required");
+        }
     }
 }

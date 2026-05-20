@@ -6,6 +6,7 @@ import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.HorseResponse;
 import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.enums.HorseStatus;
+import com.minhthien.hoser_backend.exception.UnauthorizedException;
 import com.minhthien.hoser_backend.service.HorseService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -40,10 +41,26 @@ public class HorseController {
                 horseService.createHorse(currentUser.getId(), request, image, document)));
     }
 
+    @PostMapping(value = "/horses", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<HorseResponse>> createHorseAlias(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @ModelAttribute HorseRequest request,
+            @RequestPart(required = false) MultipartFile image,
+            @RequestPart(required = false) MultipartFile document) {
+        return createHorse(currentUser, request, image, document);
+    }
+
     @GetMapping("/owner/horses")
     public ResponseEntity<ApiResponse<List<HorseResponse>>> getOwnerHorses(
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(ApiResponse.success(horseService.getOwnerHorses(currentUser.getId())));
+    }
+
+    @GetMapping("/horses/me")
+    public ResponseEntity<ApiResponse<List<HorseResponse>>> getOwnerHorsesAlias(
+            @AuthenticationPrincipal User currentUser) {
+        requireAuthenticated(currentUser);
+        return getOwnerHorses(currentUser);
     }
 
     @GetMapping("/owner/horses/{id}")
@@ -51,6 +68,14 @@ public class HorseController {
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(horseService.getOwnerHorse(currentUser.getId(), id)));
+    }
+
+    @GetMapping("/horses/{id}")
+    public ResponseEntity<ApiResponse<HorseResponse>> getHorse(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        Long viewerId = currentUser == null ? null : currentUser.getId();
+        return ResponseEntity.ok(ApiResponse.success(horseService.getHorseForViewer(viewerId, id)));
     }
 
     @PutMapping(value = "/owner/horses/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -62,6 +87,22 @@ public class HorseController {
             @RequestPart(required = false) MultipartFile document) {
         return ResponseEntity.ok(ApiResponse.success("Horse updated",
                 horseService.updateHorse(currentUser.getId(), id, request, image, document)));
+    }
+
+    @PutMapping(value = "/horses/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<HorseResponse>> updateHorseAlias(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id,
+            @Valid @ModelAttribute HorseRequest request,
+            @RequestPart(required = false) MultipartFile image,
+            @RequestPart(required = false) MultipartFile document) {
+        return updateHorse(currentUser, id, request, image, document);
+    }
+
+    private void requireAuthenticated(User currentUser) {
+        if (currentUser == null) {
+            throw new UnauthorizedException("Authentication is required");
+        }
     }
 
     @GetMapping("/admin/horses")

@@ -100,6 +100,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/skills/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/horses/approved").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/horses/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/jockeys/available").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/jockeys/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/*/profile").permitAll()

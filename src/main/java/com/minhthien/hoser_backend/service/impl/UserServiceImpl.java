@@ -1,6 +1,7 @@
 package com.minhthien.hoser_backend.service.impl;
 
 import com.minhthien.hoser_backend.dto.request.UpdatePasswordRequest;
+import com.minhthien.hoser_backend.dto.request.UserProfileRequest;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.enums.UserRole;
@@ -25,6 +26,27 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         return mapToResponse(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getPublicProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        return mapToResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateProfile(Long userId, UserProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        user.setFullName(request.getFullName());
+        user.setPhone(request.getPhone());
+        user.setAvatarUrl(request.getAvatarUrl());
+        user.setLocation(request.getLocation());
+        user.setUpdatedBy(user.getUsername());
+        return mapToResponse(userRepository.save(user));
     }
 
     @Override
@@ -77,9 +99,12 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
                 .role(user.getRole())
                 .active(user.getActive())
                 .avatarUrl(user.getAvatarUrl())
+                .location(user.getLocation())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

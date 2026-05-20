@@ -31,6 +31,12 @@ public class JockeyProfileController {
         return ResponseEntity.ok(ApiResponse.success(jockeyProfileService.getMyProfile(currentUser.getId())));
     }
 
+    @GetMapping("/jockey-profiles/me")
+    public ResponseEntity<ApiResponse<JockeyProfileResponse>> getMyProfileAlias(
+            @AuthenticationPrincipal User currentUser) {
+        return getMyProfile(currentUser);
+    }
+
     @PostMapping(value = "/jockey/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> createMyProfile(
             @AuthenticationPrincipal User currentUser,
@@ -41,6 +47,15 @@ public class JockeyProfileController {
                 jockeyProfileService.createMyProfile(currentUser.getId(), request, avatar, licenseDocument)));
     }
 
+    @PostMapping(value = "/jockey-profiles", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<JockeyProfileResponse>> createMyProfileAlias(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @ModelAttribute JockeyProfileRequest request,
+            @RequestPart(required = false) MultipartFile avatar,
+            @RequestPart(required = false) MultipartFile licenseDocument) {
+        return createMyProfile(currentUser, request, avatar, licenseDocument);
+    }
+
     @PutMapping(value = "/jockey/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> updateMyProfile(
             @AuthenticationPrincipal User currentUser,
@@ -49,6 +64,15 @@ public class JockeyProfileController {
             @RequestPart(required = false) MultipartFile licenseDocument) {
         return ResponseEntity.ok(ApiResponse.success("Jockey profile saved",
                 jockeyProfileService.updateMyProfile(currentUser.getId(), request, avatar, licenseDocument)));
+    }
+
+    @PutMapping(value = "/jockey-profiles/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<JockeyProfileResponse>> updateMyProfileAlias(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @ModelAttribute JockeyProfileRequest request,
+            @RequestPart(required = false) MultipartFile avatar,
+            @RequestPart(required = false) MultipartFile licenseDocument) {
+        return updateMyProfile(currentUser, request, avatar, licenseDocument);
     }
 
     @GetMapping("/jockeys/available")

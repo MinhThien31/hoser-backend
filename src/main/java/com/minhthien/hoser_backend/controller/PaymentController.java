@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +45,14 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success(paymentService.getUserDepositOrders(currentUser.getId())));
     }
 
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/wallets/me/deposit-orders/{id}")
+    public ResponseEntity<ApiResponse<PaymentOrderResponse>> getMyDepositOrder(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(paymentService.getUserDepositOrder(currentUser.getId(), id)));
+    }
+
     @PostMapping("/payment-callbacks/deposits")
     public ResponseEntity<ApiResponse<PaymentOrderResponse>> handleDepositCallback(
             @Valid @RequestBody DepositCallbackRequest request) {
@@ -61,6 +70,12 @@ public class PaymentController {
     @GetMapping("/admin/payment-orders")
     public ResponseEntity<ApiResponse<List<PaymentOrderResponse>>> getAdminPaymentOrders() {
         return ResponseEntity.ok(ApiResponse.success(paymentService.getAdminPaymentOrders()));
+    }
+
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/admin/payment-orders/{id}")
+    public ResponseEntity<ApiResponse<PaymentOrderResponse>> getAdminPaymentOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(paymentService.getAdminPaymentOrder(id)));
     }
 
     @SecurityRequirement(name = "bearerAuth")

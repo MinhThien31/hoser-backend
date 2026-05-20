@@ -109,6 +109,29 @@ public class JockeyInvitationServiceImpl implements JockeyInvitationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public JockeyInvitationResponse getOwnerInvitation(Long ownerId, Long invitationId) {
+        User owner = requireUser(ownerId);
+        requireRole(owner, UserRole.OWNER, "Only owners can view owner invitations");
+        JockeyInvitation invitation = requireInvitation(invitationId);
+        if (!invitation.getOwner().getId().equals(ownerId)) {
+            throw new UnauthorizedException("Cannot view another owner's invitation");
+        }
+        return mapToResponse(invitation);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<JockeyInvitationResponse> getOwnerAcceptedJockeys(Long ownerId) {
+        User owner = requireUser(ownerId);
+        requireRole(owner, UserRole.OWNER, "Only owners can view owner jockeys");
+        return jockeyInvitationRepository.findByOwnerIdAndStatusOrderByCreatedAtDesc(
+                        ownerId, AssignmentStatus.ACCEPTED).stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public JockeyInvitationResponse cancelInvitation(Long ownerId, Long invitationId) {
         User owner = requireUser(ownerId);
@@ -136,6 +159,16 @@ public class JockeyInvitationServiceImpl implements JockeyInvitationService {
         return jockeyInvitationRepository.findByJockeyIdOrderByCreatedAtDesc(jockeyId).stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public JockeyInvitationResponse getJockeyInvitation(Long jockeyId, Long invitationId) {
+        User jockey = requireUser(jockeyId);
+        requireRole(jockey, UserRole.JOCKEY, "Only jockeys can view jockey invitations");
+        JockeyInvitation invitation = requireInvitation(invitationId);
+        requireInvitationOwner(invitation, jockeyId);
+        return mapToResponse(invitation);
     }
 
     @Override

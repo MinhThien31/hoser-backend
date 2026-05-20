@@ -78,6 +78,20 @@ public class HorseServiceImpl implements HorseService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public HorseResponse getHorseForViewer(Long viewerId, Long horseId) {
+        Horse horse = horseRepository.findById(horseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Horse", "id", horseId));
+        if (horse.getStatus() == HorseStatus.APPROVED) {
+            return mapToResponse(horse);
+        }
+        if (viewerId != null && horse.getOwner().getId().equals(viewerId)) {
+            return mapToResponse(horse);
+        }
+        throw new ResourceNotFoundException("Horse", "id", horseId);
+    }
+
+    @Override
     @Transactional
     public HorseResponse updateHorse(Long ownerId, Long horseId, HorseRequest request,
                                      MultipartFile image, MultipartFile document) {

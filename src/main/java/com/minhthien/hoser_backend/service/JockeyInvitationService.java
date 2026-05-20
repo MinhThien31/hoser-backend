@@ -11,9 +11,15 @@ public interface JockeyInvitationService {
 
     List<JockeyInvitationResponse> getOwnerInvitations(Long ownerId);
 
+    JockeyInvitationResponse getOwnerInvitation(Long ownerId, Long invitationId);
+
+    List<JockeyInvitationResponse> getOwnerAcceptedJockeys(Long ownerId);
+
     JockeyInvitationResponse cancelInvitation(Long ownerId, Long invitationId);
 
     List<JockeyInvitationResponse> getJockeyInvitations(Long jockeyId);
+
+    JockeyInvitationResponse getJockeyInvitation(Long jockeyId, Long invitationId);
 
     JockeyInvitationResponse acceptInvitation(Long jockeyId, Long invitationId, InvitationDecisionRequest request);
 

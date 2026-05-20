@@ -30,10 +30,32 @@ public class JockeyInvitationController {
                 jockeyInvitationService.createInvitation(currentUser.getId(), request)));
     }
 
+    @PostMapping("/owner-jockey-invitations")
+    public ResponseEntity<ApiResponse<JockeyInvitationResponse>> createInvitationAlias(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody JockeyInvitationRequest request) {
+        return createInvitation(currentUser, request);
+    }
+
     @GetMapping("/owner/jockey-invitations")
     public ResponseEntity<ApiResponse<List<JockeyInvitationResponse>>> getOwnerInvitations(
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(ApiResponse.success(jockeyInvitationService.getOwnerInvitations(currentUser.getId())));
+    }
+
+    @GetMapping("/owner/jockey-invitations/{id}")
+    public ResponseEntity<ApiResponse<JockeyInvitationResponse>> getOwnerInvitation(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                jockeyInvitationService.getOwnerInvitation(currentUser.getId(), id)));
+    }
+
+    @GetMapping("/owners/me/jockeys")
+    public ResponseEntity<ApiResponse<List<JockeyInvitationResponse>>> getOwnerAcceptedJockeys(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(ApiResponse.success(
+                jockeyInvitationService.getOwnerAcceptedJockeys(currentUser.getId())));
     }
 
     @PutMapping("/owner/jockey-invitations/{id}/cancel")
@@ -44,10 +66,31 @@ public class JockeyInvitationController {
                 jockeyInvitationService.cancelInvitation(currentUser.getId(), id)));
     }
 
+    @PutMapping("/owner-jockey-invitations/{id}/cancel")
+    public ResponseEntity<ApiResponse<JockeyInvitationResponse>> cancelInvitationAlias(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return cancelInvitation(currentUser, id);
+    }
+
     @GetMapping("/jockey/invitations")
     public ResponseEntity<ApiResponse<List<JockeyInvitationResponse>>> getJockeyInvitations(
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(ApiResponse.success(jockeyInvitationService.getJockeyInvitations(currentUser.getId())));
+    }
+
+    @GetMapping("/jockey-invitations/me")
+    public ResponseEntity<ApiResponse<List<JockeyInvitationResponse>>> getJockeyInvitationsAlias(
+            @AuthenticationPrincipal User currentUser) {
+        return getJockeyInvitations(currentUser);
+    }
+
+    @GetMapping("/jockey/invitations/{id}")
+    public ResponseEntity<ApiResponse<JockeyInvitationResponse>> getJockeyInvitation(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                jockeyInvitationService.getJockeyInvitation(currentUser.getId(), id)));
     }
 
     @PutMapping("/jockey/invitations/{id}/accept")
@@ -59,6 +102,14 @@ public class JockeyInvitationController {
                 jockeyInvitationService.acceptInvitation(currentUser.getId(), id, request)));
     }
 
+    @PutMapping("/jockey-invitations/{id}/accept")
+    public ResponseEntity<ApiResponse<JockeyInvitationResponse>> acceptInvitationAlias(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id,
+            @RequestBody(required = false) @Valid InvitationDecisionRequest request) {
+        return acceptInvitation(currentUser, id, request);
+    }
+
     @PutMapping("/jockey/invitations/{id}/reject")
     public ResponseEntity<ApiResponse<JockeyInvitationResponse>> rejectInvitation(
             @AuthenticationPrincipal User currentUser,
@@ -66,5 +117,13 @@ public class JockeyInvitationController {
             @RequestBody(required = false) @Valid InvitationDecisionRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Jockey invitation rejected",
                 jockeyInvitationService.rejectInvitation(currentUser.getId(), id, request)));
+    }
+
+    @PutMapping("/jockey-invitations/{id}/reject")
+    public ResponseEntity<ApiResponse<JockeyInvitationResponse>> rejectInvitationAlias(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id,
+            @RequestBody(required = false) @Valid InvitationDecisionRequest request) {
+        return rejectInvitation(currentUser, id, request);
     }
 }

@@ -18,6 +18,9 @@ public interface HorseRepository extends JpaRepository<Horse, Long> {
     Optional<Horse> findByIdAndOwnerId(Long id, Long ownerId);
 
     @EntityGraph(attributePaths = "owner")
+    Optional<Horse> findByIdAndStatus(Long id, HorseStatus status);
+
+    @EntityGraph(attributePaths = "owner")
     List<Horse> findByStatusOrderByCreatedAtDesc(HorseStatus status);
 
     @EntityGraph(attributePaths = "owner")

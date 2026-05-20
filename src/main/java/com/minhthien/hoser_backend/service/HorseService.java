@@ -17,6 +17,8 @@ public interface HorseService {
 
     HorseResponse getOwnerHorse(Long ownerId, Long horseId);
 
+    HorseResponse getHorseForViewer(Long viewerId, Long horseId);
+
     HorseResponse updateHorse(Long ownerId, Long horseId, HorseRequest request, MultipartFile image, MultipartFile document);
 
     List<HorseResponse> getAdminHorses(HorseStatus status);

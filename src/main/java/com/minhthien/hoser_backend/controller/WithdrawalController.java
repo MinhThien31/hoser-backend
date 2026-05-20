@@ -7,6 +7,7 @@ import com.minhthien.hoser_backend.dto.response.AdminWalletWithdrawalResponse;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.WithdrawalResponse;
 import com.minhthien.hoser_backend.entity.User;
+import com.minhthien.hoser_backend.enums.WithdrawalStatus;
 import com.minhthien.hoser_backend.service.WithdrawalService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -45,9 +47,22 @@ public class WithdrawalController {
         return ResponseEntity.ok(ApiResponse.success(withdrawalService.getUserWithdrawals(currentUser.getId())));
     }
 
+    @GetMapping("/wallets/me/withdrawals/{id}")
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> getMyWithdrawal(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(withdrawalService.getUserWithdrawal(currentUser.getId(), id)));
+    }
+
     @GetMapping("/admin/withdrawals")
-    public ResponseEntity<ApiResponse<List<WithdrawalResponse>>> getAdminWithdrawals() {
-        return ResponseEntity.ok(ApiResponse.success(withdrawalService.getAdminWithdrawals()));
+    public ResponseEntity<ApiResponse<List<WithdrawalResponse>>> getAdminWithdrawals(
+            @RequestParam(required = false) WithdrawalStatus status) {
+        return ResponseEntity.ok(ApiResponse.success(withdrawalService.getAdminWithdrawals(status)));
+    }
+
+    @GetMapping("/admin/withdrawals/{id}")
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> getAdminWithdrawal(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(withdrawalService.getAdminWithdrawal(id)));
     }
 
     @PutMapping("/admin/withdrawals/{id}/approve")

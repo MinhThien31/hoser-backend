@@ -76,10 +76,25 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     }
 
     @Override
-    public List<WithdrawalResponse> getAdminWithdrawals() {
-        return withdrawalRequestRepository.findAllByOrderByCreatedAtDesc().stream()
+    public WithdrawalResponse getUserWithdrawal(Long userId, Long withdrawalId) {
+        return withdrawalRequestRepository.findByIdAndUserId(withdrawalId, userId)
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("WithdrawalRequest", "id", withdrawalId));
+    }
+
+    @Override
+    public List<WithdrawalResponse> getAdminWithdrawals(WithdrawalStatus status) {
+        List<WithdrawalRequest> withdrawals = status == null
+                ? withdrawalRequestRepository.findAllByOrderByCreatedAtDesc()
+                : withdrawalRequestRepository.findByStatusOrderByCreatedAtDesc(status);
+        return withdrawals.stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Override
+    public WithdrawalResponse getAdminWithdrawal(Long withdrawalId) {
+        return mapToResponse(getWithdrawal(withdrawalId));
     }
 
     @Override

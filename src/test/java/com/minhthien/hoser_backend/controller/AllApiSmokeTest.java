@@ -202,6 +202,16 @@ class AllApiSmokeTest {
 
     private void exerciseUserAndAdminApis() throws Exception {
         assertOk(get("/api/v1/users/me").header("Authorization", bearer(ownerToken)));
+        assertOk(get("/api/v1/users/me/profile").header("Authorization", bearer(ownerToken)));
+        assertOk(putJson("/api/v1/users/me/profile", ownerToken, """
+                {
+                  "fullName": "Smoke Owner",
+                  "phone": "0900000000",
+                  "avatarUrl": "https://example.com/avatar.png",
+                  "location": "Ho Chi Minh City"
+                }
+                """));
+        assertOk(get("/api/v1/users/" + owner.getId() + "/profile"));
 
         assertOk(get("/api/v1/admin/users").header("Authorization", bearer(adminToken)));
         assertOk(get("/api/v1/admin/users/" + adminTarget.getId()).header("Authorization", bearer(adminToken)));
@@ -268,18 +278,25 @@ class AllApiSmokeTest {
                 .header("Authorization", bearer(adminToken)));
 
         assertNonServerError(get("/api/v1/jockey/profile").header("Authorization", bearer(jockeyToken)));
-        assertOk(multipart("/api/v1/jockey/profile")
+        assertOk(multipart("/api/v1/jockey-profiles")
                 .param("licenseNumber", "SMOKE-LICENSE")
                 .param("experienceYears", "3")
                 .param("hirePrice", "50000")
                 .param("bio", "Smoke profile")
                 .header("Authorization", bearer(jockeyToken)));
         assertOk(get("/api/v1/jockey/profile").header("Authorization", bearer(jockeyToken)));
+        assertOk(get("/api/v1/jockey-profiles/me").header("Authorization", bearer(jockeyToken)));
         assertOk(multipartPut("/api/v1/jockey/profile")
                 .param("licenseNumber", "SMOKE-LICENSE")
                 .param("experienceYears", "4")
                 .param("hirePrice", "50000")
                 .param("bio", "Smoke profile updated")
+                .header("Authorization", bearer(jockeyToken)));
+        assertOk(multipartPut("/api/v1/jockey-profiles/me")
+                .param("licenseNumber", "SMOKE-LICENSE")
+                .param("experienceYears", "5")
+                .param("hirePrice", "50000")
+                .param("bio", "Smoke profile alias updated")
                 .header("Authorization", bearer(jockeyToken)));
         Long profileId = latestJockeyProfileId();
         assertOk(get("/api/v1/admin/jockey-profiles").header("Authorization", bearer(adminToken)));
@@ -300,19 +317,51 @@ class AllApiSmokeTest {
                 """));
         assertOk(put("/api/v1/admin/jockey-profiles/" + profileId + "/approve")
                 .header("Authorization", bearer(adminToken)));
+
+        assertOk(multipart("/api/v1/horses")
+                .param("name", "Smoke Horse Alias")
+                .param("breed", "Arabian")
+                .param("age", "4")
+                .param("gender", "FEMALE")
+                .param("color", "Gray")
+                .header("Authorization", bearer(ownerToken)));
+        Long aliasHorseId = latestHorseId();
+        assertOk(get("/api/v1/horses/me").header("Authorization", bearer(ownerToken)));
+        assertOk(multipartPut("/api/v1/horses/" + aliasHorseId)
+                .param("name", "Smoke Horse Alias Updated")
+                .param("breed", "Arabian")
+                .param("age", "5")
+                .param("gender", "FEMALE")
+                .param("color", "Gray")
+                .header("Authorization", bearer(ownerToken)));
+        assertOk(put("/api/v1/admin/horses/" + aliasHorseId + "/approve")
+                .header("Authorization", bearer(adminToken)));
+        assertOk(get("/api/v1/horses/" + aliasHorseId));
     }
 
     private void exerciseJockeyInvitationApis(Long horseId) throws Exception {
         Long firstInvitationId = createInvitation(horseId);
         assertOk(get("/api/v1/owner/jockey-invitations").header("Authorization", bearer(ownerToken)));
+        assertOk(get("/api/v1/owner/jockey-invitations/" + firstInvitationId)
+                .header("Authorization", bearer(ownerToken)));
         assertOk(put("/api/v1/owner/jockey-invitations/" + firstInvitationId + "/cancel")
                 .header("Authorization", bearer(ownerToken)));
 
         Long secondInvitationId = createInvitation(horseId);
         assertOk(get("/api/v1/jockey/invitations").header("Authorization", bearer(jockeyToken)));
+        assertOk(get("/api/v1/jockey-invitations/me").header("Authorization", bearer(jockeyToken)));
+        assertOk(get("/api/v1/jockey/invitations/" + secondInvitationId)
+                .header("Authorization", bearer(jockeyToken)));
         assertOk(putJson("/api/v1/jockey/invitations/" + secondInvitationId + "/reject", jockeyToken, """
                 {
                   "note": "Smoke reject"
+                }
+                """));
+
+        Long aliasInvitationId = createInvitationAlias(horseId);
+        assertOk(putJson("/api/v1/jockey-invitations/" + aliasInvitationId + "/reject", jockeyToken, """
+                {
+                  "note": "Smoke alias reject"
                 }
                 """));
 
@@ -322,6 +371,7 @@ class AllApiSmokeTest {
                   "note": "Smoke accept"
                 }
                 """));
+        assertOk(get("/api/v1/owners/me/jockeys").header("Authorization", bearer(ownerToken)));
     }
 
     private void exerciseWalletPaymentAndWithdrawalApis() throws Exception {
@@ -337,7 +387,11 @@ class AllApiSmokeTest {
                 """));
         PaymentOrder callbackOrder = latestPaymentOrder();
         assertOk(get("/api/v1/wallets/me/deposit-orders").header("Authorization", bearer(userToken)));
+        assertOk(get("/api/v1/wallets/me/deposit-orders/" + callbackOrder.getId())
+                .header("Authorization", bearer(userToken)));
         assertOk(get("/api/v1/admin/payment-orders").header("Authorization", bearer(adminToken)));
+        assertOk(get("/api/v1/admin/payment-orders/" + callbackOrder.getId())
+                .header("Authorization", bearer(adminToken)));
         assertOk(postJson("/api/v1/payment-callbacks/deposits", """
                 {
                   "referenceCode": "%s",
@@ -358,7 +412,13 @@ class AllApiSmokeTest {
                 """));
         Long paidWithdrawalId = latestWithdrawalId();
         assertOk(get("/api/v1/wallets/me/withdrawals").header("Authorization", bearer(userToken)));
+        assertOk(get("/api/v1/wallets/me/withdrawals/" + paidWithdrawalId)
+                .header("Authorization", bearer(userToken)));
         assertOk(get("/api/v1/admin/withdrawals").header("Authorization", bearer(adminToken)));
+        assertOk(get("/api/v1/admin/withdrawals").param("status", "PENDING")
+                .header("Authorization", bearer(adminToken)));
+        assertOk(get("/api/v1/admin/withdrawals/" + paidWithdrawalId)
+                .header("Authorization", bearer(adminToken)));
         assertOk(putJson("/api/v1/admin/withdrawals/" + paidWithdrawalId + "/approve", adminToken, """
                 {
                   "note": "Smoke approve"
@@ -455,6 +515,17 @@ class AllApiSmokeTest {
                   "horseId": %d,
                   "jockeyId": %d,
                   "message": "Smoke invitation"
+                }
+                """.formatted(horseId, jockey.getId())));
+        return latestInvitationId();
+    }
+
+    private Long createInvitationAlias(Long horseId) throws Exception {
+        assertOk(postJson("/api/v1/owner-jockey-invitations", ownerToken, """
+                {
+                  "horseId": %d,
+                  "jockeyId": %d,
+                  "message": "Smoke alias invitation"
                 }
                 """.formatted(horseId, jockey.getId())));
         return latestInvitationId();

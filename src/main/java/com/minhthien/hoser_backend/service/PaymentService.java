@@ -13,7 +13,11 @@ public interface PaymentService {
 
     List<PaymentOrderResponse> getUserDepositOrders(Long userId);
 
+    PaymentOrderResponse getUserDepositOrder(Long userId, Long orderId);
+
     List<PaymentOrderResponse> getAdminPaymentOrders();
+
+    PaymentOrderResponse getAdminPaymentOrder(Long orderId);
 
     List<PaymentCallbackLogResponse> getAdminPaymentCallbackLogs();
 
