@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 @Service
 public class MailServiceImpl implements MailService {
-    private static final String SUBJECT = "Mã OTP đặt lại mật khẩu HOSER";
+    private static final String SUBJECT = "Mã OTP đặt lại mật khẩu HORSE";
     private static final int OTP_EXPIRES_IN_MINUTES = 10;
 
     private final JavaMailSender mailSender;
@@ -49,7 +49,7 @@ public class MailServiceImpl implements MailService {
 
     private String buildPlainText(String formattedOtp) {
         return """
-                HOSER
+                HORSE
 
                 Mã OTP đặt lại mật khẩu của bạn là: %s
 
@@ -77,14 +77,14 @@ public class MailServiceImpl implements MailService {
                                 <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e6edf5;">
                                     <tr>
                                         <td style="background:#0f766e;padding:24px 28px;text-align:center;">
-                                            <div style="font-size:24px;line-height:32px;font-weight:700;color:#ffffff;letter-spacing:0;">HOSER</div>
+                                            <div style="font-size:24px;line-height:32px;font-weight:700;color:#ffffff;letter-spacing:0;">HORSE</div>
                                             <div style="font-size:14px;line-height:20px;color:#d7f7f1;margin-top:4px;">Đặt lại mật khẩu</div>
                                         </td>
                                     </tr>
                                     <tr>
                                         <td style="padding:32px 28px 28px;text-align:center;">
                                             <h1 style="margin:0 0 12px;font-size:22px;line-height:30px;color:#172033;font-weight:700;">Mã xác thực của bạn</h1>
-                                            <p style="margin:0 auto 24px;max-width:420px;font-size:15px;line-height:24px;color:#526071;">Nhập mã OTP bên dưới để tiếp tục đặt lại mật khẩu tài khoản HOSER.</p>
+                                            <p style="margin:0 auto 24px;max-width:420px;font-size:15px;line-height:24px;color:#526071;">Nhập mã OTP bên dưới để tiếp tục đặt lại mật khẩu tài khoản HORSE.</p>
                                             <div style="display:inline-block;background:#eefcf8;border:1px solid #99f6e4;border-radius:8px;padding:16px 24px;font-size:32px;line-height:40px;font-weight:700;color:#0f766e;letter-spacing:6px;">%s</div>
                                             <p style="margin:24px auto 0;max-width:420px;font-size:14px;line-height:22px;color:#526071;">Mã này sẽ hết hạn sau <strong style="color:#172033;">%d phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
                                         </td>
@@ -98,7 +98,7 @@ public class MailServiceImpl implements MailService {
                                     </tr>
                                     <tr>
                                         <td style="background:#f8fafc;padding:18px 28px;text-align:center;font-size:12px;line-height:18px;color:#7b8794;">
-                                            Email này được gửi tự động từ HOSER.
+                                            Email này được gửi tự động từ HORSE.
                                         </td>
                                     </tr>
                                 </table>

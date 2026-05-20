@@ -44,16 +44,16 @@ class MailServiceImplTest {
         assertThat(sentMessage.getRecipients(Message.RecipientType.TO))
                 .extracting(Object::toString)
                 .containsExactly("user@example.com");
-        assertThat(sentMessage.getSubject()).isEqualTo("Mã OTP đặt lại mật khẩu HOSER");
+        assertThat(sentMessage.getSubject()).isEqualTo("Mã OTP đặt lại mật khẩu HORSE");
         assertThat(textParts.plainText()).contains(
-                "HOSER",
+                "HORSE",
                 "Mã OTP đặt lại mật khẩu của bạn là: 1 2 3 4 5 6",
                 "Mã này sẽ hết hạn sau 10 phút",
                 "Nếu bạn không yêu cầu đặt lại mật khẩu"
         );
         assertThat(textParts.html()).contains(
                 "<html lang=\"vi\">",
-                "HOSER",
+                "HORSE",
                 "Đặt lại mật khẩu",
                 "1 2 3 4 5 6",
                 "10 phút",

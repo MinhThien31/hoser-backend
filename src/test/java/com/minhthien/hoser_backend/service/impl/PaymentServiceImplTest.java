@@ -86,7 +86,7 @@ class PaymentServiceImplTest {
                 CreatePaymentLinkResponse.builder()
                         .bin("970422")
                         .accountNumber("123456789")
-                        .accountName("HOSER")
+                        .accountName("HORSE")
                         .orderCode(10L)
                         .amount(10000L)
                         .description("HS10")

@@ -571,7 +571,7 @@ class AllApiSmokeTest {
                     return CreatePaymentLinkResponse.builder()
                             .bin("970422")
                             .accountNumber("123456789")
-                            .accountName("HOSER")
+                            .accountName("HORSE")
                             .orderCode(request.getOrderCode())
                             .amount(request.getAmount())
                             .description(request.getDescription())

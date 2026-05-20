@@ -228,7 +228,7 @@ class Phase2Phase3MoneyFlowIntegrationTest {
                 .provider(PaymentProvider.PAYOS)
                 .status(PaymentOrderStatus.PENDING)
                 .referenceCode("DEP-" + user.getUsername())
-                .transferContent("HOSER DEP-" + user.getUsername())
+                .transferContent("HORSE DEP-" + user.getUsername())
                 .createdBy(user.getUsername())
                 .updatedBy(user.getUsername())
                 .build());

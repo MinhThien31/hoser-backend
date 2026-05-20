@@ -72,7 +72,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .provider(PaymentProvider.PAYOS)
                 .status(PaymentOrderStatus.PENDING)
                 .referenceCode(referenceCode)
-                .transferContent("HOSER " + referenceCode)
+                .transferContent("HORSE " + referenceCode)
                 .expiredAt(LocalDateTime.now().plusMinutes(30))
                 .createdBy(user.getUsername())
                 .updatedBy(user.getUsername())
