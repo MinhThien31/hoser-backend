@@ -1,11 +1,13 @@
 package com.minhthien.hoser_backend.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 
@@ -38,9 +40,9 @@ public class JockeyProfileRequest {
     @Size(max = 1000, message = "Specialties must be at most 1000 characters")
     private String specialties;
 
-    @Size(max = 1000, message = "Avatar URL must be at most 1000 characters")
-    private String avatarUrl;
+    @Schema(type = "string", format = "binary", description = "Jockey avatar image file")
+    private MultipartFile avatar;
 
-    @Size(max = 1000, message = "License document URL must be at most 1000 characters")
-    private String licenseDocumentUrl;
+    @Schema(type = "string", format = "binary", description = "Jockey license document file")
+    private MultipartFile licenseDocument;
 }

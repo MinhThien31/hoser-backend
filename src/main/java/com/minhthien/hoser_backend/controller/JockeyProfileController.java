@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,39 +39,33 @@ public class JockeyProfileController {
     @PostMapping(value = "/jockey/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> createMyProfile(
             @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute JockeyProfileRequest request,
-            @RequestPart(required = false) MultipartFile avatar,
-            @RequestPart(required = false) MultipartFile licenseDocument) {
+            @Valid @ModelAttribute JockeyProfileRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Jockey profile created",
-                jockeyProfileService.createMyProfile(currentUser.getId(), request, avatar, licenseDocument)));
+                jockeyProfileService.createMyProfile(
+                        currentUser.getId(), request, request.getAvatar(), request.getLicenseDocument())));
     }
 
     @PostMapping(value = "/jockey-profiles", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> createMyProfileAlias(
             @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute JockeyProfileRequest request,
-            @RequestPart(required = false) MultipartFile avatar,
-            @RequestPart(required = false) MultipartFile licenseDocument) {
-        return createMyProfile(currentUser, request, avatar, licenseDocument);
+            @Valid @ModelAttribute JockeyProfileRequest request) {
+        return createMyProfile(currentUser, request);
     }
 
     @PutMapping(value = "/jockey/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> updateMyProfile(
             @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute JockeyProfileRequest request,
-            @RequestPart(required = false) MultipartFile avatar,
-            @RequestPart(required = false) MultipartFile licenseDocument) {
+            @Valid @ModelAttribute JockeyProfileRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Jockey profile saved",
-                jockeyProfileService.updateMyProfile(currentUser.getId(), request, avatar, licenseDocument)));
+                jockeyProfileService.updateMyProfile(
+                        currentUser.getId(), request, request.getAvatar(), request.getLicenseDocument())));
     }
 
     @PutMapping(value = "/jockey-profiles/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> updateMyProfileAlias(
             @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute JockeyProfileRequest request,
-            @RequestPart(required = false) MultipartFile avatar,
-            @RequestPart(required = false) MultipartFile licenseDocument) {
-        return updateMyProfile(currentUser, request, avatar, licenseDocument);
+            @Valid @ModelAttribute JockeyProfileRequest request) {
+        return updateMyProfile(currentUser, request);
     }
 
     @GetMapping("/jockeys/available")

@@ -10,8 +10,8 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 
 - `Guest`: xem thông tin public, đăng ký/đăng nhập.
 - `User/Owner`: quản lý ví, hồ sơ cá nhân, ngựa, thuê jockey, đăng ký giải, check-in và nhận kết quả/giải thưởng.
-- `Jockey`: quản lý hồ sơ jockey, nhận hoặc từ chối lời mời, tham gia race đã được phân công.
-- `Referee`: nhận lịch race, check-in participant, ghi vi phạm, nhập draft result và gửi report.
+- `Jockey`: quản lý hồ sơ jockey, nhận hoặc từ chối lời mời, tham gia race/heat đã được phân công.
+- `Referee`: nhận lịch race/heat, check-in participant, ghi vi phạm, nhập draft result và gửi report.
 - `Admin`: cấu hình hệ thống, ví admin, duyệt hồ sơ, tạo tournament, duyệt registration, schedule race, duyệt kết quả, payout và xem thống kê.
 - `System`: xử lý wallet ledger, scheduler, notification/email, advancement, payout, idempotency và audit.
 - `Payment Provider`: gửi callback xác nhận lệnh nạp tiền.
@@ -22,12 +22,23 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 ### Luồng 1 - Admin cấu hình thông tin giải đấu
 
 1. Admin tạo giải đấu với thông tin cơ bản: tên, mô tả, địa điểm, thời gian đăng ký, thời gian thi đấu và trạng thái publish.
-2. Admin cấu hình các vòng đấu: vòng loại, bán kết, chung kết hoặc cấu trúc round tùy giải.
-3. Admin xác định `minTeams` và `maxTeams` cho tournament hoặc từng round nếu cần.
-4. Admin cấu hình rule chọn đội thắng/đội đi tiếp qua từng round.
-5. Admin cấu hình phí đăng ký/tiền đặt cọc, chính sách capture/release và deadline check-in.
-6. Admin cấu hình giải thưởng: hạng giải, số tiền/vật phẩm, điều kiện nhận giải và người nhận payout.
-7. Tournament chỉ được publish/open registration khi thông tin giải đấu, vòng đấu, `minTeams`, `maxTeams` và prize config hợp lệ.
+2. Admin xác định `minTeams` và `maxTeams` cho toàn giải để biết số participant/horse team tối thiểu và tối đa được tham gia.
+3. Admin xem danh sách ngựa/horse team đủ điều kiện, gồm ngựa đã approved và jockey đã accepted với owner.
+4. Admin cấu hình nhiều vòng đấu cho tournament: vòng loại, bán kết, chung kết hoặc cấu trúc round tùy giải.
+5. Trong mỗi round, admin cấu hình số lượng race/heat, số participant tối thiểu/tối đa trong từng race/heat và thứ tự thi đấu.
+6. Admin cấu hình `advancement rule`: số participant đi tiếp từ từng race/heat hoặc từng round, cách chọn theo thứ hạng, thời gian chạy nhanh nhất hoặc rule nghiệp vụ của giải.
+7. Admin phân chia participant/horse team vào race/heat phù hợp theo sức chứa, lịch thi đấu, referee và điều kiện tổ chức.
+8. Admin cấu hình phí đăng ký/tiền đặt cọc, chính sách capture/release và deadline check-in.
+9. Admin cấu hình giải thưởng: hạng nhất, hạng nhì, hạng ba hoặc các hạng khác, số tiền/vật phẩm, điều kiện nhận giải và người nhận payout.
+10. Tournament chỉ được publish/open registration khi thông tin giải đấu, `minTeams`, `maxTeams`, round/race config, advancement rule và prize config hợp lệ.
+
+Ví dụ cấu hình giải đấu 40 ngựa:
+
+1. Vòng loại có 40 participant, chia thành 8 race/heat, mỗi race/heat có 5 participant.
+2. Mỗi race/heat vòng loại chọn 2 participant đi tiếp, tổng cộng 16 participant vào bán kết.
+3. Bán kết chia thành 2 race/heat, mỗi race/heat có 8 participant.
+4. Mỗi race/heat bán kết chọn 4 participant nhanh nhất đi tiếp, tổng cộng 8 participant vào chung kết.
+5. Chung kết có 8 participant thi đấu để xác định ranking cuối cùng: hạng nhất, hạng nhì, hạng ba và các hạng còn lại nếu giải có cấu hình.
 
 ### Luồng 2 - Chủ ngựa quản lý profile cá nhân và ngựa
 
@@ -51,9 +62,9 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 7. System gửi email và notification xác nhận registration đã được ghi nhận.
 8. Admin duyệt registration; approve thì capture tiền, reject/cancel thì release tiền hold về owner.
 9. Trước lịch thi đấu 3 ngày, system gửi email và notification nhắc owner, jockey và referee.
-10. Đến ngày thi đấu, participant check-in theo race/round.
+10. Đến ngày thi đấu, participant check-in theo race/heat của round.
 11. Referee ghi nhận check-in, violation và draft result; admin xác nhận kết quả chính thức.
-12. System dựa trên kết quả đã xác nhận để chọn ngựa thắng hoặc đội đi tiếp vào vòng tiếp theo.
+12. System dựa trên kết quả đã xác nhận để chọn participant/horse team thắng hoặc đi tiếp vào vòng tiếp theo.
 13. Quy trình check-in -> result -> advancement lặp lại qua từng vòng đến vòng cuối.
 14. Ở vòng cuối, system xác định winner chính thức và trigger trao giải/payout.
 
@@ -61,19 +72,19 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 
 1. Customer/spectator vào màn hình danh sách giải đấu.
 2. Customer/spectator chọn giải đấu muốn xem.
-3. Customer/spectator xem danh sách race/trận trong giải.
-4. Customer/spectator chọn race muốn theo dõi.
-5. Customer/spectator xem lịch thi đấu, participant, horse, jockey, referee, trạng thái race, kết quả và leaderboard khi đã được publish.
+3. Customer/spectator xem danh sách race/heat trong giải.
+4. Customer/spectator chọn race/heat muốn theo dõi.
+5. Customer/spectator xem lịch thi đấu, participant, horse, jockey, referee, trạng thái race/heat, kết quả và leaderboard khi đã được publish.
 
 ### Luồng 4 - Admin xem thống kê kết quả giải đấu
 
 1. Admin xem thống kê tổng quan theo tournament: số lượng customer/owner tham gia, số horse team, số registration và trạng thái giải đấu.
 2. Admin xem thông tin jockey tham gia, lịch sử race và kết quả liên quan.
 3. Admin xem thông tin referee/trọng tài được phân công và report/result đã xử lý.
-4. Admin xem thống kê theo round/race: participant, check-in, absent, disqualified, result, winner và đội đi tiếp.
+4. Admin xem thống kê theo round/race/heat: participant, check-in, absent, disqualified, result, winner và participant đi tiếp.
 5. Admin xem thống kê giải thưởng: prize config, winner, trạng thái payout và transaction liên quan.
 6. Admin xem thống kê tài chính: entry fee/deposit hold, capture, release/refund, prize payout và audit ledger.
-7. Admin có thể lọc theo tournament, round, race, registration status, payout status và khoảng thời gian.
+7. Admin có thể lọc theo tournament, round, race/heat, registration status, payout status và khoảng thời gian.
 
 ## Tổng quan end-to-end flow
 
@@ -81,16 +92,16 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 2. User/Owner có ví nội bộ, nạp tiền qua payment/manual transfer và tiền được ghi nhận vào cả user wallet lẫn admin/system wallet.
 3. Owner tạo hồ sơ ngựa; jockey tạo hồ sơ jockey; admin duyệt để hồ sơ đủ điều kiện tham gia giải.
 4. Owner gửi lời mời thuê jockey cho ngựa của mình. Tiền thuê được hold từ ví owner, sau đó capture khi jockey accept hoặc release khi invitation bị cancel/reject.
-5. Admin tạo tournament, cấu hình round, `minTeams`, `maxTeams`, entry fee/deposit, prize và rule chọn đội đi tiếp.
+5. Admin tạo tournament, cấu hình round, race/heat, `minTeams`, `maxTeams`, entry fee/deposit, prize và rule chọn participant đi tiếp.
 6. Owner đăng ký `horse team = horse + owner + jockey accepted` vào tournament đang mở. Entry fee/deposit dùng flow `hold -> capture/release`.
 7. Admin duyệt registration. Khi approve thì capture tiền theo policy; khi reject/cancel thì release tiền hold về ví owner.
-8. Khi đủ `minTeams`, admin generate race/heat, phân gate, phân referee và publish lịch thi đấu.
-9. System gửi notification/email khi race được scheduled và gửi reminder trước lịch thi đấu 3 ngày cho owner, jockey và referee.
+8. Khi đủ `minTeams`, admin generate race/heat theo round config, phân participant vào race/heat, phân gate, phân referee và publish lịch thi đấu.
+9. System gửi notification/email khi race/heat được scheduled và gửi reminder trước lịch thi đấu 3 ngày cho owner, jockey và referee.
 10. Referee check-in participant trong ngày thi đấu, ghi violation nếu có và nhập draft result.
-11. Admin duyệt result chính thức. System chọn winner/qualifier theo advancement rule và tạo seed cho round tiếp theo.
-12. Quy trình race -> result -> advancement lặp lại đến vòng cuối.
-13. Khi final completed, system xác định ranking, tạo leaderboard snapshot, payout prize qua wallet và ghi ledger đầy đủ.
-14. Admin xem statistics theo tournament, round, race, participant, prize, payout và dòng tiền.
+11. Admin duyệt result chính thức. System chọn winner/qualifier theo advancement rule của round hiện tại và tạo seed cho round tiếp theo.
+12. Quy trình race/heat -> result -> advancement lặp lại qua vòng loại, bán kết và các vòng khác đến chung kết.
+13. Khi chung kết completed, system xác định ranking cuối cùng, tạo leaderboard snapshot, payout prize qua wallet và ghi ledger đầy đủ.
+14. Admin xem statistics theo tournament, round, race/heat, participant, prize, payout và dòng tiền.
 15. Các phase mở rộng gồm prediction, betting bằng ví, marketplace, notification/websocket/email và production hardening.
 
 ## Luồng liên phase quan trọng
@@ -106,31 +117,31 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 7. Owner chọn horse team hợp lệ để đăng ký tournament.
 8. System hold entry fee/deposit từ ví owner và gửi notification/email xác nhận registration created.
 9. Admin approve registration. System capture entry fee/deposit theo policy và ghi ledger.
-10. Owner, jockey nhận lịch race và reminder trước 3 ngày.
+10. Owner, jockey nhận lịch race/heat và reminder trước 3 ngày.
 11. Participant check-in, thi đấu và nhận result published.
-12. Nếu team thắng hoặc vào vòng sau, system gửi notification advancement.
-13. Nếu team đạt prize ở final, system payout prize qua ví theo recipient policy và ghi ledger `PRIZE_PAYOUT`.
+12. Nếu participant/horse team thắng hoặc vào vòng sau, system gửi notification advancement.
+13. Nếu participant/horse team đạt prize ở chung kết, system payout prize qua ví theo recipient policy và ghi ledger `PRIZE_PAYOUT`.
 
 ### Admin tạo giải, vận hành và xem thống kê
 
 1. Admin đăng nhập bằng token có role admin.
 2. Admin tạo tournament ở trạng thái `DRAFT`.
-3. Admin cấu hình registration window, race time, round structure, `minTeams`, `maxTeams`, entry fee/deposit, check-in deadline và prize.
+3. Admin cấu hình registration window, race time, round structure, race/heat trong từng round, `minTeams`, `maxTeams`, entry fee/deposit, check-in deadline và prize.
 4. Admin publish/open registration khi setup hợp lệ.
 5. Admin duyệt hoặc từ chối tournament registration.
-6. Khi đủ điều kiện schedule, admin generate race/heat từ registration approved.
-7. Admin phân referee, chỉnh lịch race nếu cần và publish lịch.
+6. Khi đủ điều kiện schedule, admin generate race/heat từ registration approved theo round config.
+7. Admin phân participant vào race/heat, phân referee, chỉnh lịch race/heat nếu cần và publish lịch.
 8. Admin duyệt draft result do referee gửi.
-9. Admin trigger hoặc xác nhận advancement qua từng round.
-10. Ở final, admin xác nhận final result, prize payout và tournament completed.
-11. Admin xem statistics theo tournament, round/race, registration, check-in, result, prize payout và finance ledger.
+9. Admin trigger hoặc xác nhận advancement qua từng round theo rule đã cấu hình.
+10. Ở chung kết, admin xác nhận final ranking, prize payout và tournament completed.
+11. Admin xem statistics theo tournament, round/race/heat, registration, check-in, result, prize payout và finance ledger.
 
 ### Referee nhận lịch, check-in và nhập kết quả
 
-1. Referee có profile/account hợp lệ và được admin assign vào race.
-2. Referee nhận notification/email khi race scheduled.
+1. Referee có profile/account hợp lệ và được admin assign vào race/heat.
+2. Referee nhận notification/email khi race/heat scheduled.
 3. Trước ngày thi đấu 3 ngày, referee nhận reminder.
-4. Đến ngày race, referee mở hoặc thực hiện check-in theo trạng thái race.
+4. Đến ngày race/heat, referee mở hoặc thực hiện check-in theo trạng thái race/heat.
 5. Referee check-in từng participant, ghi chú sức khỏe, giấy tờ, absent hoặc disqualified nếu rule cho phép.
 6. Referee ghi violation, penalty và draft result theo finish order/time.
 7. Referee submit report để admin review.
@@ -334,18 +345,20 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 
 1. Admin tạo tournament với tên, mô tả, địa điểm, thời gian đăng ký, thời gian thi đấu.
 2. Admin cấu hình registration window, entry fee/deposit amount và check-in deadline.
-3. Admin cấu hình `minTeams`, `maxTeams` ở tournament và round nếu cần.
+3. Admin cấu hình `minTeams`, `maxTeams` cho toàn tournament và có thể cấu hình giới hạn participant cho từng round/race nếu cần.
 4. Admin cấu hình round structure: vòng loại, bán kết, chung kết hoặc cấu trúc tùy giải.
-5. Admin cấu hình advancement rule: số đội thắng hoặc đi tiếp mỗi race/round.
-6. Admin cấu hình prize: hạng, amount/item, recipient policy và note.
-7. Admin publish hoặc open registration khi setup hợp lệ.
-8. Public/owner/spectator xem được tournament đã publish/open/scheduled/ongoing.
+5. Admin cấu hình số race/heat trong từng round và số participant tối thiểu/tối đa của mỗi race/heat.
+6. Admin cấu hình advancement rule: số participant thắng hoặc đi tiếp từ mỗi race/heat/round, ví dụ chọn theo rank hoặc thời gian chạy nhanh nhất.
+7. Admin cấu hình prize: hạng nhất, hạng nhì, hạng ba hoặc hạng khác, amount/item, recipient policy và note.
+8. Admin publish hoặc open registration khi setup hợp lệ.
+9. Public/owner/spectator xem được tournament đã publish/open/scheduled/ongoing.
 
 ### Trạng thái và điều kiện chặn
 
-- Tournament chưa đủ basic info, round config, `minTeams`/`maxTeams` hoặc prize config bắt buộc thì không publish/open.
+- Tournament chưa đủ basic info, round config, race/heat config, `minTeams`/`maxTeams` hoặc prize config bắt buộc thì không publish/open.
 - `minTeams` phải lớn hơn 0.
 - `minTeams` không được vượt `maxTeams`.
+- Sức chứa race/heat và advancement rule phải tạo được đường đi hợp lệ từ vòng đầu đến chung kết.
 - Entry fee/deposit và prize amount không được âm.
 - Public API không hiển thị tournament draft/private.
 
@@ -356,7 +369,7 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 
 ### Acceptance flow
 
-- Admin tạo được giải có vòng đấu, số đội và giải thưởng rõ ràng.
+- Admin tạo được giải có vòng đấu, race/heat, số participant, rule đi tiếp và giải thưởng rõ ràng.
 - Tournament đi được từ `DRAFT` đến `PUBLISHED` và `OPEN_REGISTRATION`.
 
 ## Phase 7 - Tournament registration + deposit hold
@@ -399,24 +412,26 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 
 ### Flow chính
 
-1. Admin generate race/heat từ registration approved.
+1. Admin generate race/heat từ registration approved theo round config của tournament.
 2. System chỉ schedule tournament khi số horse team approved đạt `minTeams`.
-3. System tạo participant list cho từng race.
-4. Admin hoặc system gán gate number không trùng trong race.
-5. Admin phân công referee cho race.
-6. System kiểm tra jockey/referee không trùng lịch cùng thời điểm.
-7. Race chuyển sang `SCHEDULED`; tournament/round chuyển trạng thái phù hợp.
-8. System gửi notification/email race scheduled cho owner, jockey và referee.
-9. Scheduler gửi reminder trước lịch thi đấu 3 ngày cho owner, jockey và referee.
-10. Public/spectator xem được lịch race đã publish.
+3. System tạo participant list cho từng race/heat, bảo đảm không vượt quá sức chứa đã cấu hình.
+4. Admin có thể xem danh sách participant/horse team và điều chỉnh phân bổ race/heat phù hợp trước khi publish lịch.
+5. Admin hoặc system gán gate number không trùng trong race/heat.
+6. Admin phân công referee cho race/heat.
+7. System kiểm tra jockey/referee không trùng lịch cùng thời điểm.
+8. Race/heat chuyển sang `SCHEDULED`; tournament/round chuyển trạng thái phù hợp.
+9. System gửi notification/email race scheduled cho owner, jockey và referee.
+10. Scheduler gửi reminder trước lịch thi đấu 3 ngày cho owner, jockey và referee.
+11. Public/spectator xem được lịch race đã publish.
 
 ### Trạng thái và điều kiện chặn
 
 - Registration chưa approved không được schedule.
 - Tournament chưa đủ `minTeams` không được generate race.
-- Gate number duplicate trong cùng race bị chặn.
+- Race/heat vượt sức chứa participant đã cấu hình thì bị chặn.
+- Gate number duplicate trong cùng race/heat bị chặn.
 - Jockey hoặc referee trùng lịch bị chặn.
-- Reminder cùng race/recipient không được gửi trùng.
+- Reminder cùng race/heat/recipient không được gửi trùng.
 
 ### Notification/email
 
@@ -426,50 +441,50 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 
 ### Acceptance flow
 
-- Race có participant list, gate number, referee và lịch rõ ràng.
+- Race/heat có participant list, gate number, referee và lịch rõ ràng.
 - Các bên liên quan nhận notification/email đúng thời điểm.
 
 ## Phase 9 - Check-in + result recording + round advancement
 
 ### Flow chính
 
-1. Referee mở check-in hoặc thực hiện check-in khi race đúng trạng thái.
+1. Referee mở check-in hoặc thực hiện check-in khi race/heat đúng trạng thái.
 2. Referee check-in từng participant.
 3. Referee ghi chú sức khỏe, giấy tờ, trạng thái, absent hoặc disqualified nếu rule cho phép.
-4. Race chỉ start khi số participant check-in đạt điều kiện tối thiểu.
+4. Race/heat chỉ start khi số participant check-in đạt điều kiện tối thiểu.
 5. Referee ghi violation, penalty và draft result theo finish order/time.
 6. Referee submit report/draft result.
 7. Admin review và approve/reject draft result.
-8. Khi result approved, race chuyển `RESULT_CONFIRMED` hoặc `COMPLETED`.
-9. System dùng advancement rule để chọn winner/qualifier vào round tiếp theo.
-10. Nếu còn vòng tiếp theo, system tạo participant seed để admin schedule tiếp.
-11. System gửi notification khi result published và khi team được vào vòng tiếp theo.
+8. Khi result approved, race/heat chuyển `RESULT_CONFIRMED` hoặc `COMPLETED`.
+9. System dùng advancement rule của round hiện tại để chọn winner/qualifier vào round tiếp theo.
+10. Nếu còn vòng tiếp theo, system tạo participant seed đúng số lượng để admin schedule tiếp.
+11. System gửi notification khi result published và khi participant/horse team được vào vòng tiếp theo.
 
 ### Trạng thái và điều kiện chặn
 
-- Không start race đã completed/cancelled.
+- Không start race/heat đã completed/cancelled.
 - Participant chưa check-in bị xử lý theo rule.
 - Draft result không được duplicate rank.
 - Admin approve result chỉ một lần.
-- Advancement phải chọn đúng số team theo rule.
+- Advancement phải chọn đúng số participant/horse team theo rule đã cấu hình cho race/heat hoặc round.
 
 ### Notification/email
 
 - Result published notification cho owner, jockey, referee và spectator liên quan.
-- Advancement notification cho team đi tiếp.
+- Advancement notification cho participant/horse team đi tiếp.
 - Disqualified/absent notification nếu cần.
 
 ### Acceptance flow
 
-- Kết quả race được xác nhận chính thức.
-- Đội thắng/đội đi tiếp trace được qua advancement record.
-- Quy trình lặp được qua nhiều vòng đến chung kết.
+- Kết quả race/heat được xác nhận chính thức.
+- Participant/horse team thắng hoặc đi tiếp trace được qua advancement record.
+- Quy trình lặp được qua nhiều vòng, nhiều race/heat đến chung kết.
 
 ## Phase 10 - Final result + prize payout + tournament statistics
 
 ### Flow chính
 
-1. Khi vòng cuối completed, system xác định winner và final ranking.
+1. Khi chung kết completed, system xác định winner và final ranking.
 2. System tạo leaderboard snapshot cho tournament.
 3. System tính prize theo prize config đã snapshot.
 4. Admin review hoặc xác nhận final result/prize payout nếu policy yêu cầu.
@@ -478,7 +493,7 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 7. System gửi notification/email cho winner, owner, jockey và admin.
 8. Tournament chuyển `COMPLETED` khi result và payout hoàn tất hoặc được admin xác nhận.
 9. Admin xem statistics tổng quan: owner/customer count, horse team count, jockey count, referee count, registration count.
-10. Admin xem statistics round/race: scheduled, completed, cancelled, check-in, absent, disqualified, winner.
+10. Admin xem statistics round/race/heat: scheduled, completed, cancelled, check-in, absent, disqualified, winner.
 11. Admin xem finance statistics: entry fee captured, deposit released/refunded, prize payout và admin/system wallet transaction.
 
 ### Trạng thái và điều kiện chặn
@@ -647,10 +662,10 @@ Tài liệu này dùng để đọc theo luồng thực tế: ai làm gì, trạ
 - Horse/jockey phải approved trước khi dùng trong tournament.
 - Invitation accepted mới tạo horse team hợp lệ.
 - `horse team = horse + owner + jockey accepted`.
-- Tournament setup có round, `minTeams`, `maxTeams`, entry fee/deposit, prize và advancement rule.
+- Tournament setup có round, race/heat, `minTeams`, `maxTeams`, entry fee/deposit, prize và advancement rule.
 - Entry fee/deposit dùng `hold -> capture/release`.
-- Race chỉ generate khi approved teams đạt `minTeams`.
-- Gate number không trùng trong cùng race.
+- Race/heat chỉ generate khi approved teams đạt `minTeams`.
+- Gate number không trùng trong cùng race/heat.
 - Reminder trước lịch thi đấu 3 ngày được gửi đúng owner, jockey và referee.
 - Result chỉ chính thức sau khi admin approve.
 - Advancement tạo được participant seed cho vòng tiếp theo.

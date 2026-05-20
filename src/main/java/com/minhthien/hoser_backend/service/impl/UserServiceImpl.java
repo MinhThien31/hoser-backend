@@ -8,18 +8,22 @@ import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.exception.BadRequestException;
 import com.minhthien.hoser_backend.exception.ResourceNotFoundException;
 import com.minhthien.hoser_backend.repository.UserRepository;
+import com.minhthien.hoser_backend.service.CloudinaryUploadService;
 import com.minhthien.hoser_backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+    private static final String USER_AVATAR_FOLDER = "hoser/users/avatars";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CloudinaryUploadService cloudinaryUploadService;
 
     @Override
     public UserResponse getCurrentUser(Long userId) {
@@ -39,11 +43,19 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse updateProfile(Long userId, UserProfileRequest request) {
+        return updateProfile(userId, request, null);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateProfile(Long userId, UserProfileRequest request, MultipartFile avatar) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
-        user.setAvatarUrl(request.getAvatarUrl());
+        if (avatar != null) {
+            user.setAvatarUrl(cloudinaryUploadService.uploadImage(avatar, USER_AVATAR_FOLDER));
+        }
         user.setLocation(request.getLocation());
         user.setUpdatedBy(user.getUsername());
         return mapToResponse(userRepository.save(user));

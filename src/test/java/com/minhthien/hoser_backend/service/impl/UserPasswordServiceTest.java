@@ -1,16 +1,20 @@
 package com.minhthien.hoser_backend.service.impl;
 
 import com.minhthien.hoser_backend.dto.request.UpdatePasswordRequest;
+import com.minhthien.hoser_backend.dto.request.UserProfileRequest;
+import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.exception.BadRequestException;
 import com.minhthien.hoser_backend.exception.ResourceNotFoundException;
 import com.minhthien.hoser_backend.repository.UserRepository;
+import com.minhthien.hoser_backend.service.CloudinaryUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -19,6 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,13 +34,16 @@ class UserPasswordServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private CloudinaryUploadService cloudinaryUploadService;
+
     private PasswordEncoder passwordEncoder;
     private UserServiceImpl userService;
 
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        userService = new UserServiceImpl(userRepository, passwordEncoder);
+        userService = new UserServiceImpl(userRepository, passwordEncoder, cloudinaryUploadService);
     }
 
     @Test
@@ -52,6 +60,32 @@ class UserPasswordServiceTest {
         verify(userRepository).save(userCaptor.capture());
         assertThat(passwordEncoder.matches("new-password", userCaptor.getValue().getPassword())).isTrue();
         assertThat(passwordEncoder.matches("old-password", userCaptor.getValue().getPassword())).isFalse();
+    }
+
+    @Test
+    void updateProfileWithAvatarUploadsFileAndStoresReturnedUrl() {
+        User user = User.builder()
+                .id(1L)
+                .username("owner")
+                .build();
+        UserProfileRequest request = new UserProfileRequest();
+        request.setFullName("Updated Owner");
+        request.setPhone("0900000000");
+        request.setLocation("Ho Chi Minh City");
+        MockMultipartFile avatar = new MockMultipartFile("avatar", "avatar.png", "image/png", "img".getBytes());
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(cloudinaryUploadService.uploadImage(eq(avatar), eq("hoser/users/avatars")))
+                .thenReturn("https://cdn.example/users/avatar.png");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponse response = userService.updateProfile(1L, request, avatar);
+
+        assertThat(response.getFullName()).isEqualTo("Updated Owner");
+        assertThat(response.getPhone()).isEqualTo("0900000000");
+        assertThat(response.getLocation()).isEqualTo("Ho Chi Minh City");
+        assertThat(response.getAvatarUrl()).isEqualTo("https://cdn.example/users/avatar.png");
+        verify(cloudinaryUploadService).uploadImage(avatar, "hoser/users/avatars");
     }
 
     @Test

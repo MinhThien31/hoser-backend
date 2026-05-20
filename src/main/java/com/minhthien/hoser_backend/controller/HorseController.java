@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,20 +33,16 @@ public class HorseController {
     @PostMapping(value = "/owner/horses", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<HorseResponse>> createHorse(
             @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute HorseRequest request,
-            @RequestPart(required = false) MultipartFile image,
-            @RequestPart(required = false) MultipartFile document) {
+            @Valid @ModelAttribute HorseRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Horse created",
-                horseService.createHorse(currentUser.getId(), request, image, document)));
+                horseService.createHorse(currentUser.getId(), request, request.getImage(), request.getDocument())));
     }
 
     @PostMapping(value = "/horses", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<HorseResponse>> createHorseAlias(
             @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute HorseRequest request,
-            @RequestPart(required = false) MultipartFile image,
-            @RequestPart(required = false) MultipartFile document) {
-        return createHorse(currentUser, request, image, document);
+            @Valid @ModelAttribute HorseRequest request) {
+        return createHorse(currentUser, request);
     }
 
     @GetMapping("/owner/horses")
@@ -82,21 +77,17 @@ public class HorseController {
     public ResponseEntity<ApiResponse<HorseResponse>> updateHorse(
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long id,
-            @Valid @ModelAttribute HorseRequest request,
-            @RequestPart(required = false) MultipartFile image,
-            @RequestPart(required = false) MultipartFile document) {
+            @Valid @ModelAttribute HorseRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Horse updated",
-                horseService.updateHorse(currentUser.getId(), id, request, image, document)));
+                horseService.updateHorse(currentUser.getId(), id, request, request.getImage(), request.getDocument())));
     }
 
     @PutMapping(value = "/horses/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<HorseResponse>> updateHorseAlias(
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long id,
-            @Valid @ModelAttribute HorseRequest request,
-            @RequestPart(required = false) MultipartFile image,
-            @RequestPart(required = false) MultipartFile document) {
-        return updateHorse(currentUser, id, request, image, document);
+            @Valid @ModelAttribute HorseRequest request) {
+        return updateHorse(currentUser, id, request);
     }
 
     private void requireAuthenticated(User currentUser) {

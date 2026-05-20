@@ -207,7 +207,6 @@ class AllApiSmokeTest {
                 {
                   "fullName": "Smoke Owner",
                   "phone": "0900000000",
-                  "avatarUrl": "https://example.com/avatar.png",
                   "location": "Ho Chi Minh City"
                 }
                 """));

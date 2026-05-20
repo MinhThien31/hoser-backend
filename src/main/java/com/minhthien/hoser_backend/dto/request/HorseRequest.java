@@ -1,9 +1,11 @@
 package com.minhthien.hoser_backend.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 
@@ -29,9 +31,9 @@ public class HorseRequest {
 
     private BigDecimal weightKg;
 
-    @Size(max = 1000, message = "Image URL must be at most 1000 characters")
-    private String imageUrl;
+    @Schema(type = "string", format = "binary", description = "Horse image file")
+    private MultipartFile image;
 
-    @Size(max = 1000, message = "Document URL must be at most 1000 characters")
-    private String documentUrl;
+    @Schema(type = "string", format = "binary", description = "Horse document file")
+    private MultipartFile document;
 }
