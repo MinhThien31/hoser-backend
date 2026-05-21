@@ -6,7 +6,6 @@ import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.HorseResponse;
 import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.enums.HorseStatus;
-import com.minhthien.hoser_backend.exception.UnauthorizedException;
 import com.minhthien.hoser_backend.service.HorseService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -38,24 +37,10 @@ public class HorseController {
                 horseService.createHorse(currentUser.getId(), request, request.getImage(), request.getDocument())));
     }
 
-    @PostMapping(value = "/horses", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<HorseResponse>> createHorseAlias(
-            @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute HorseRequest request) {
-        return createHorse(currentUser, request);
-    }
-
     @GetMapping("/owner/horses")
     public ResponseEntity<ApiResponse<List<HorseResponse>>> getOwnerHorses(
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(ApiResponse.success(horseService.getOwnerHorses(currentUser.getId())));
-    }
-
-    @GetMapping("/horses/me")
-    public ResponseEntity<ApiResponse<List<HorseResponse>>> getOwnerHorsesAlias(
-            @AuthenticationPrincipal User currentUser) {
-        requireAuthenticated(currentUser);
-        return getOwnerHorses(currentUser);
     }
 
     @GetMapping("/owner/horses/{id}")
@@ -80,20 +65,6 @@ public class HorseController {
             @Valid @ModelAttribute HorseRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Horse updated",
                 horseService.updateHorse(currentUser.getId(), id, request, request.getImage(), request.getDocument())));
-    }
-
-    @PutMapping(value = "/horses/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<HorseResponse>> updateHorseAlias(
-            @AuthenticationPrincipal User currentUser,
-            @PathVariable Long id,
-            @Valid @ModelAttribute HorseRequest request) {
-        return updateHorse(currentUser, id, request);
-    }
-
-    private void requireAuthenticated(User currentUser) {
-        if (currentUser == null) {
-            throw new UnauthorizedException("Authentication is required");
-        }
     }
 
     @GetMapping("/admin/horses")

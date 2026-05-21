@@ -30,12 +30,6 @@ public class JockeyProfileController {
         return ResponseEntity.ok(ApiResponse.success(jockeyProfileService.getMyProfile(currentUser.getId())));
     }
 
-    @GetMapping("/jockey-profiles/me")
-    public ResponseEntity<ApiResponse<JockeyProfileResponse>> getMyProfileAlias(
-            @AuthenticationPrincipal User currentUser) {
-        return getMyProfile(currentUser);
-    }
-
     @PostMapping(value = "/jockey/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> createMyProfile(
             @AuthenticationPrincipal User currentUser,
@@ -59,13 +53,6 @@ public class JockeyProfileController {
         return ResponseEntity.ok(ApiResponse.success("Jockey profile saved",
                 jockeyProfileService.updateMyProfile(
                         currentUser.getId(), request, request.getAvatar(), request.getLicenseDocument())));
-    }
-
-    @PutMapping(value = "/jockey-profiles/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<JockeyProfileResponse>> updateMyProfileAlias(
-            @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute JockeyProfileRequest request) {
-        return updateMyProfile(currentUser, request);
     }
 
     @GetMapping("/jockeys/available")

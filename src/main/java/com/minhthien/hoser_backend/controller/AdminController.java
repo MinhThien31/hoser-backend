@@ -42,15 +42,6 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("Account activated", null));
     }
 
-    @PutMapping("/admin/users/{userId}/status")
-    public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
-            @PathVariable Long userId,
-            @RequestParam boolean active) {
-
-        UserResponse response = adminService.updateUserStatus(userId, active);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
     @PutMapping("/admin/users/{userId}/role")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserRole(
             @PathVariable Long userId,

@@ -201,7 +201,6 @@ class AllApiSmokeTest {
     }
 
     private void exerciseUserAndAdminApis() throws Exception {
-        assertOk(get("/api/v1/users/me").header("Authorization", bearer(ownerToken)));
         assertOk(get("/api/v1/users/me/profile").header("Authorization", bearer(ownerToken)));
         assertOk(putJson("/api/v1/users/me/profile", ownerToken, """
                 {
@@ -210,16 +209,12 @@ class AllApiSmokeTest {
                   "location": "Ho Chi Minh City"
                 }
                 """));
-        assertOk(get("/api/v1/users/" + owner.getId() + "/profile"));
 
         assertOk(get("/api/v1/admin/users").header("Authorization", bearer(adminToken)));
         assertOk(get("/api/v1/admin/users/" + adminTarget.getId()).header("Authorization", bearer(adminToken)));
         assertOk(put("/api/v1/admin/users/" + adminTarget.getId() + "/deactivate")
                 .header("Authorization", bearer(adminToken)));
         assertOk(put("/api/v1/admin/users/" + adminTarget.getId() + "/activate")
-                .header("Authorization", bearer(adminToken)));
-        assertOk(put("/api/v1/admin/users/" + adminTarget.getId() + "/status")
-                .param("active", "true")
                 .header("Authorization", bearer(adminToken)));
         assertOk(putJson("/api/v1/admin/users/" + adminTarget.getId() + "/role", adminToken, """
                 {
@@ -284,18 +279,11 @@ class AllApiSmokeTest {
                 .param("bio", "Smoke profile")
                 .header("Authorization", bearer(jockeyToken)));
         assertOk(get("/api/v1/jockey/profile").header("Authorization", bearer(jockeyToken)));
-        assertOk(get("/api/v1/jockey-profiles/me").header("Authorization", bearer(jockeyToken)));
         assertOk(multipartPut("/api/v1/jockey/profile")
                 .param("licenseNumber", "SMOKE-LICENSE")
                 .param("experienceYears", "4")
                 .param("hirePrice", "50000")
                 .param("bio", "Smoke profile updated")
-                .header("Authorization", bearer(jockeyToken)));
-        assertOk(multipartPut("/api/v1/jockey-profiles/me")
-                .param("licenseNumber", "SMOKE-LICENSE")
-                .param("experienceYears", "5")
-                .param("hirePrice", "50000")
-                .param("bio", "Smoke profile alias updated")
                 .header("Authorization", bearer(jockeyToken)));
         Long profileId = latestJockeyProfileId();
         assertOk(get("/api/v1/admin/jockey-profiles").header("Authorization", bearer(adminToken)));
@@ -317,25 +305,7 @@ class AllApiSmokeTest {
         assertOk(put("/api/v1/admin/jockey-profiles/" + profileId + "/approve")
                 .header("Authorization", bearer(adminToken)));
 
-        assertOk(multipart("/api/v1/horses")
-                .param("name", "Smoke Horse Alias")
-                .param("breed", "Arabian")
-                .param("age", "4")
-                .param("gender", "FEMALE")
-                .param("color", "Gray")
-                .header("Authorization", bearer(ownerToken)));
-        Long aliasHorseId = latestHorseId();
-        assertOk(get("/api/v1/horses/me").header("Authorization", bearer(ownerToken)));
-        assertOk(multipartPut("/api/v1/horses/" + aliasHorseId)
-                .param("name", "Smoke Horse Alias Updated")
-                .param("breed", "Arabian")
-                .param("age", "5")
-                .param("gender", "FEMALE")
-                .param("color", "Gray")
-                .header("Authorization", bearer(ownerToken)));
-        assertOk(put("/api/v1/admin/horses/" + aliasHorseId + "/approve")
-                .header("Authorization", bearer(adminToken)));
-        assertOk(get("/api/v1/horses/" + aliasHorseId));
+        assertOk(get("/api/v1/horses/" + horseId));
     }
 
     private void exerciseJockeyInvitationApis(Long horseId) throws Exception {
@@ -348,19 +318,11 @@ class AllApiSmokeTest {
 
         Long secondInvitationId = createInvitation(horseId);
         assertOk(get("/api/v1/jockey/invitations").header("Authorization", bearer(jockeyToken)));
-        assertOk(get("/api/v1/jockey-invitations/me").header("Authorization", bearer(jockeyToken)));
         assertOk(get("/api/v1/jockey/invitations/" + secondInvitationId)
                 .header("Authorization", bearer(jockeyToken)));
         assertOk(putJson("/api/v1/jockey/invitations/" + secondInvitationId + "/reject", jockeyToken, """
                 {
                   "note": "Smoke reject"
-                }
-                """));
-
-        Long aliasInvitationId = createInvitationAlias(horseId);
-        assertOk(putJson("/api/v1/jockey-invitations/" + aliasInvitationId + "/reject", jockeyToken, """
-                {
-                  "note": "Smoke alias reject"
                 }
                 """));
 
@@ -504,8 +466,8 @@ class AllApiSmokeTest {
                 .replace("SMOKE-PAYOS", "SMOKE-PAYOS-LEGACY");
         assertOk(postJson("/api/payos/webhook", legacyWebhook));
 
-        assertOk(put("/api/v1/users/me/deactivate")
-                .header("Authorization", bearer(token(deactivationTarget))));
+        assertOk(put("/api/v1/admin/users/" + deactivationTarget.getId() + "/deactivate")
+                .header("Authorization", bearer(adminToken)));
     }
 
     private Long createInvitation(Long horseId) throws Exception {
@@ -514,17 +476,6 @@ class AllApiSmokeTest {
                   "horseId": %d,
                   "jockeyId": %d,
                   "message": "Smoke invitation"
-                }
-                """.formatted(horseId, jockey.getId())));
-        return latestInvitationId();
-    }
-
-    private Long createInvitationAlias(Long horseId) throws Exception {
-        assertOk(postJson("/api/v1/owner-jockey-invitations", ownerToken, """
-                {
-                  "horseId": %d,
-                  "jockeyId": %d,
-                  "message": "Smoke alias invitation"
                 }
                 """.formatted(horseId, jockey.getId())));
         return latestInvitationId();

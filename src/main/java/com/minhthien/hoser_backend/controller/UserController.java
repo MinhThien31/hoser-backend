@@ -13,7 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,11 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
-
-    @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserResponse>> getMe(@AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(ApiResponse.success(userService.getCurrentUser(currentUser.getId())));
-    }
 
     @GetMapping("/me/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getMyProfile(@AuthenticationPrincipal User currentUser) {
@@ -55,17 +49,6 @@ public class UserController {
         requireAuthenticated(currentUser);
         return ResponseEntity.ok(ApiResponse.success("Profile updated",
                 userService.updateProfile(currentUser.getId(), request, request.getAvatar())));
-    }
-
-    @GetMapping("/{id}/profile")
-    public ResponseEntity<ApiResponse<UserResponse>> getPublicProfile(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(userService.getPublicProfile(id)));
-    }
-
-    @PutMapping("/me/deactivate")
-    public ResponseEntity<ApiResponse<Void>> deactivateMe(@AuthenticationPrincipal User currentUser) {
-        userService.deactivateAccount(currentUser.getId());
-        return ResponseEntity.ok(ApiResponse.success("Account deactivated", null));
     }
 
     private void requireAuthenticated(User currentUser) {
