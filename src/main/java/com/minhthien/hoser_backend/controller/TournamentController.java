@@ -39,20 +39,13 @@ public class TournamentController {
                 tournamentService.updateTournament(currentUser.getId(), id, request)));
     }
 
-    @PutMapping("/admin/tournaments/{id}/publish")
-    public ResponseEntity<ApiResponse<TournamentResponse>> publishTournament(
+    @PutMapping("/admin/tournaments/{id}/status")
+    public ResponseEntity<ApiResponse<TournamentResponse>> updateTournamentStatus(
             @AuthenticationPrincipal User currentUser,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("Tournament published",
-                tournamentService.publishTournament(currentUser.getId(), id)));
-    }
-
-    @PutMapping("/admin/tournaments/{id}/open-registration")
-    public ResponseEntity<ApiResponse<TournamentResponse>> openRegistration(
-            @AuthenticationPrincipal User currentUser,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("Tournament registration opened",
-                tournamentService.openRegistration(currentUser.getId(), id)));
+            @PathVariable Long id,
+            @RequestParam TournamentStatus status) {
+        return ResponseEntity.ok(ApiResponse.success("Tournament status updated",
+                tournamentService.updateTournamentStatus(currentUser.getId(), id, status)));
     }
 
     @GetMapping("/admin/tournaments")

@@ -11,9 +11,7 @@ public interface TournamentService {
 
     TournamentResponse updateTournament(Long adminId, Long tournamentId, TournamentRequest request);
 
-    TournamentResponse publishTournament(Long adminId, Long tournamentId);
-
-    TournamentResponse openRegistration(Long adminId, Long tournamentId);
+    TournamentResponse updateTournamentStatus(Long adminId, Long tournamentId, TournamentStatus status);
 
     List<TournamentResponse> getAdminTournaments(TournamentStatus status);
 

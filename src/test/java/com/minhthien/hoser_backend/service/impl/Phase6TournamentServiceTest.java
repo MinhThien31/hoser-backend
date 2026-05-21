@@ -13,6 +13,7 @@ import com.minhthien.hoser_backend.enums.PrizeRecipientPolicy;
 import com.minhthien.hoser_backend.enums.TournamentStatus;
 import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.exception.BadRequestException;
+import com.minhthien.hoser_backend.exception.UnauthorizedException;
 import com.minhthien.hoser_backend.repository.AdminAuditLogRepository;
 import com.minhthien.hoser_backend.repository.TournamentRepository;
 import com.minhthien.hoser_backend.repository.UserRepository;
@@ -69,7 +70,7 @@ class Phase6TournamentServiceTest {
     }
 
     @Test
-    void publishRejectsTournamentWithoutRoundConfig() {
+    void updatePublicStatusRejectsTournamentWithoutRoundConfig() {
         TournamentServiceImpl service = service();
         User admin = user(9L, "admin", UserRole.ADMIN);
         Tournament tournament = tournament(TournamentStatus.DRAFT);
@@ -78,13 +79,13 @@ class Phase6TournamentServiceTest {
         when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
         when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
 
-        assertThatThrownBy(() -> service.publishTournament(9L, 10L))
+        assertThatThrownBy(() -> service.updateTournamentStatus(9L, 10L, TournamentStatus.PUBLISHED))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Tournament must have at least one round before publishing");
     }
 
     @Test
-    void publishThenOpenRegistrationMovesTournamentStatusForward() {
+    void updateStatusMovesTournamentToPublishedAndOpenRegistration() {
         TournamentServiceImpl service = service();
         User admin = user(9L, "admin", UserRole.ADMIN);
         Tournament tournament = tournament(TournamentStatus.DRAFT);
@@ -93,13 +94,30 @@ class Phase6TournamentServiceTest {
         when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
         when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var published = service.publishTournament(9L, 10L);
+        var published = service.updateTournamentStatus(9L, 10L, TournamentStatus.PUBLISHED);
         assertThat(published.getStatus()).isEqualTo(TournamentStatus.PUBLISHED);
         assertThat(tournament.getPublishedAt()).isNotNull();
 
-        var opened = service.openRegistration(9L, 10L);
+        var opened = service.updateTournamentStatus(9L, 10L, TournamentStatus.OPEN_REGISTRATION);
         assertThat(opened.getStatus()).isEqualTo(TournamentStatus.OPEN_REGISTRATION);
         assertThat(tournament.getOpenedRegistrationAt()).isNotNull();
+
+        ArgumentCaptor<AdminAuditLog> auditCaptor = ArgumentCaptor.forClass(AdminAuditLog.class);
+        verify(adminAuditLogRepository, org.mockito.Mockito.times(2)).save(auditCaptor.capture());
+        assertThat(auditCaptor.getAllValues())
+                .extracting(AdminAuditLog::getAction)
+                .containsOnly("TOURNAMENT_STATUS_UPDATED");
+    }
+
+    @Test
+    void nonAdminCannotUpdateTournamentStatus() {
+        TournamentServiceImpl service = service();
+        User owner = user(1L, "owner", UserRole.OWNER);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+
+        assertThatThrownBy(() -> service.updateTournamentStatus(1L, 10L, TournamentStatus.CANCELLED))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage("Only admins can manage tournaments");
     }
 
     @Test

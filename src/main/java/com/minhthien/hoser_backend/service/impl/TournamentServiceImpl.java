@@ -76,37 +76,28 @@ public class TournamentServiceImpl implements TournamentService {
 
     @Override
     @Transactional
-    public TournamentResponse publishTournament(Long adminId, Long tournamentId) {
+    public TournamentResponse updateTournamentStatus(Long adminId, Long tournamentId, TournamentStatus status) {
         User admin = requireAdmin(adminId);
-        Tournament tournament = requireTournament(tournamentId);
-        if (tournament.getStatus() != TournamentStatus.DRAFT && tournament.getStatus() != TournamentStatus.PUBLISHED) {
-            throw new BadRequestException("Only draft or published tournaments can be published");
+        if (status == null) {
+            throw new BadRequestException("Tournament status is required");
         }
+        Tournament tournament = requireTournament(tournamentId);
+        TournamentStatus oldStatus = tournament.getStatus();
 
-        validateReadyForPublish(tournament);
-        tournament.setStatus(TournamentStatus.PUBLISHED);
-        tournament.setPublishedAt(LocalDateTime.now());
+        if (requiresReadySetup(status)) {
+            validateReadyForPublish(tournament);
+        }
+        tournament.setStatus(status);
+        if (status == TournamentStatus.PUBLISHED && tournament.getPublishedAt() == null) {
+            tournament.setPublishedAt(LocalDateTime.now());
+        }
+        if (status == TournamentStatus.OPEN_REGISTRATION && tournament.getOpenedRegistrationAt() == null) {
+            tournament.setOpenedRegistrationAt(LocalDateTime.now());
+        }
         tournament.setUpdatedBy(admin.getUsername());
         Tournament saved = tournamentRepository.save(tournament);
-        recordAudit(admin, "TOURNAMENT_PUBLISHED", saved, "Tournament published");
-        return mapToResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public TournamentResponse openRegistration(Long adminId, Long tournamentId) {
-        User admin = requireAdmin(adminId);
-        Tournament tournament = requireTournament(tournamentId);
-        if (tournament.getStatus() != TournamentStatus.PUBLISHED) {
-            throw new BadRequestException("Only published tournaments can open registration");
-        }
-
-        validateReadyForPublish(tournament);
-        tournament.setStatus(TournamentStatus.OPEN_REGISTRATION);
-        tournament.setOpenedRegistrationAt(LocalDateTime.now());
-        tournament.setUpdatedBy(admin.getUsername());
-        Tournament saved = tournamentRepository.save(tournament);
-        recordAudit(admin, "TOURNAMENT_REGISTRATION_OPENED", saved, "Tournament registration opened");
+        recordAudit(admin, "TOURNAMENT_STATUS_UPDATED", saved,
+                "Tournament status changed from " + oldStatus + " to " + status);
         return mapToResponse(saved);
     }
 
@@ -437,6 +428,10 @@ public class TournamentServiceImpl implements TournamentService {
 
     private boolean isPublicStatus(TournamentStatus status) {
         return publicStatuses().contains(status);
+    }
+
+    private boolean requiresReadySetup(TournamentStatus status) {
+        return status == TournamentStatus.PUBLISHED || status == TournamentStatus.OPEN_REGISTRATION;
     }
 
     private List<TournamentStatus> publicStatuses() {
