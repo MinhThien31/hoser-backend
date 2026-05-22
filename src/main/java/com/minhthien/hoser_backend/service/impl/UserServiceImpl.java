@@ -49,14 +49,23 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse updateProfile(Long userId, UserProfileRequest request, MultipartFile avatar) {
+        if (request == null) {
+            throw new BadRequestException("User profile request is required");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-        user.setFullName(request.getFullName());
-        user.setPhone(request.getPhone());
+        if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
         if (avatar != null) {
             user.setAvatarUrl(cloudinaryUploadService.uploadImage(avatar, USER_AVATAR_FOLDER));
         }
-        user.setLocation(request.getLocation());
+        if (request.getLocation() != null) {
+            user.setLocation(request.getLocation());
+        }
         user.setUpdatedBy(user.getUsername());
         return mapToResponse(userRepository.save(user));
     }

@@ -2,6 +2,7 @@ package com.minhthien.hoser_backend.service.impl;
 
 import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.JockeyProfileRequest;
+import com.minhthien.hoser_backend.dto.request.JockeyProfileUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.JockeyProfileResponse;
 import com.minhthien.hoser_backend.entity.JockeyProfile;
 import com.minhthien.hoser_backend.entity.User;
@@ -66,18 +67,24 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
 
     @Override
     @Transactional
-    public JockeyProfileResponse updateMyProfile(Long jockeyId, JockeyProfileRequest request,
+    public JockeyProfileResponse updateMyProfile(Long jockeyId, JockeyProfileUpdateRequest request,
                                                  MultipartFile avatar, MultipartFile licenseDocument) {
         User jockey = requireUser(jockeyId);
         requireRole(jockey, UserRole.JOCKEY, "Only jockeys can manage jockey profile");
+        requireUpdateRequest(request);
         JockeyProfile profile = jockeyProfileRepository.findByUserId(jockeyId)
                 .orElseThrow(() -> new ResourceNotFoundException("JockeyProfile", "userId", jockeyId));
         if (profile.getStatus() == JockeyStatus.SUSPENDED) {
             throw new BadRequestException("Suspended jockey profile cannot be updated");
         }
-        requireUniqueLicenseNumber(request.getLicenseNumber(), jockeyId);
+        if (request.getLicenseNumber() != null) {
+            if (!hasText(request.getLicenseNumber())) {
+                throw new BadRequestException("License number is required");
+            }
+            requireUniqueLicenseNumber(request.getLicenseNumber(), jockeyId);
+        }
 
-        applyRequest(profile, request);
+        applyUpdateRequest(profile, request);
         applyUploadedFiles(profile, avatar, licenseDocument);
         resetForReview(profile, jockey);
         return mapToResponse(jockeyProfileRepository.save(profile));
@@ -154,6 +161,37 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
         profile.setSpecialties(request.getSpecialties());
     }
 
+    private void applyUpdateRequest(JockeyProfile profile, JockeyProfileUpdateRequest request) {
+        if (request.getLicenseNumber() != null) {
+            profile.setLicenseNumber(request.getLicenseNumber());
+        }
+        if (request.getExperienceYears() != null) {
+            profile.setExperienceYears(request.getExperienceYears());
+        }
+        if (request.getHeightCm() != null) {
+            profile.setHeightCm(request.getHeightCm());
+        }
+        if (request.getWeightKg() != null) {
+            profile.setWeightKg(request.getWeightKg());
+        }
+        if (request.getHirePrice() != null) {
+            requireHirePrice(request.getHirePrice());
+            profile.setHirePrice(request.getHirePrice());
+        }
+        if (request.getBio() != null) {
+            profile.setBio(request.getBio());
+        }
+        if (request.getAwards() != null) {
+            profile.setAwards(request.getAwards());
+        }
+        if (request.getAchievements() != null) {
+            profile.setAchievements(request.getAchievements());
+        }
+        if (request.getSpecialties() != null) {
+            profile.setSpecialties(request.getSpecialties());
+        }
+    }
+
     private void applyUploadedFiles(JockeyProfile profile, MultipartFile avatar, MultipartFile licenseDocument) {
         if (avatar != null) {
             profile.setAvatarUrl(cloudinaryUploadService.uploadImage(avatar, JOCKEY_AVATAR_FOLDER));
@@ -199,6 +237,12 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
         return request.getReason();
     }
 
+    private void requireUpdateRequest(JockeyProfileUpdateRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Jockey profile request is required");
+        }
+    }
+
     private JockeyProfile requireProfile(Long profileId) {
         return jockeyProfileRepository.findById(profileId)
                 .orElseThrow(() -> new ResourceNotFoundException("JockeyProfile", "id", profileId));
@@ -213,6 +257,10 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
         if (user.getRole() != role) {
             throw new UnauthorizedException(message);
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private JockeyProfileResponse mapToResponse(JockeyProfile profile) {

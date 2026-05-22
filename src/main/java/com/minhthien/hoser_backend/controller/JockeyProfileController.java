@@ -2,6 +2,7 @@ package com.minhthien.hoser_backend.controller;
 
 import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.JockeyProfileRequest;
+import com.minhthien.hoser_backend.dto.request.JockeyProfileUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.JockeyProfileResponse;
 import com.minhthien.hoser_backend.entity.User;
@@ -49,7 +50,7 @@ public class JockeyProfileController {
     @PutMapping(value = "/jockey/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> updateMyProfile(
             @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute JockeyProfileRequest request) {
+            @Valid @ModelAttribute JockeyProfileUpdateRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Jockey profile saved",
                 jockeyProfileService.updateMyProfile(
                         currentUser.getId(), request, request.getAvatar(), request.getLicenseDocument())));

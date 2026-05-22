@@ -2,6 +2,7 @@ package com.minhthien.hoser_backend.service.impl;
 
 import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.HorseRequest;
+import com.minhthien.hoser_backend.dto.request.HorseUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.HorseResponse;
 import com.minhthien.hoser_backend.entity.Horse;
 import com.minhthien.hoser_backend.entity.User;
@@ -93,10 +94,11 @@ public class HorseServiceImpl implements HorseService {
 
     @Override
     @Transactional
-    public HorseResponse updateHorse(Long ownerId, Long horseId, HorseRequest request,
+    public HorseResponse updateHorse(Long ownerId, Long horseId, HorseUpdateRequest request,
                                      MultipartFile image, MultipartFile document) {
         User owner = requireUser(ownerId);
         requireRole(owner, UserRole.OWNER, "Only owners can manage horses");
+        requireUpdateRequest(request);
         Horse horse = horseRepository.findByIdAndOwnerId(horseId, ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Horse", "id", horseId));
 
@@ -104,7 +106,7 @@ public class HorseServiceImpl implements HorseService {
             throw new BadRequestException("Approved or suspended horses cannot be updated by owner");
         }
 
-        applyRequest(horse, request);
+        applyUpdateRequest(horse, request);
         applyUploadedFiles(horse, image, document);
         horse.setStatus(HorseStatus.PENDING);
         horse.setReviewReason(null);
@@ -163,6 +165,33 @@ public class HorseServiceImpl implements HorseService {
         horse.setWeightKg(request.getWeightKg());
     }
 
+    private void applyUpdateRequest(Horse horse, HorseUpdateRequest request) {
+        if (request.getName() != null) {
+            if (!hasText(request.getName())) {
+                throw new BadRequestException("Horse name is required");
+            }
+            horse.setName(request.getName());
+        }
+        if (request.getBreed() != null) {
+            horse.setBreed(request.getBreed());
+        }
+        if (request.getAge() != null) {
+            horse.setAge(request.getAge());
+        }
+        if (request.getGender() != null) {
+            horse.setGender(request.getGender());
+        }
+        if (request.getColor() != null) {
+            horse.setColor(request.getColor());
+        }
+        if (request.getHeightCm() != null) {
+            horse.setHeightCm(request.getHeightCm());
+        }
+        if (request.getWeightKg() != null) {
+            horse.setWeightKg(request.getWeightKg());
+        }
+    }
+
     private void applyUploadedFiles(Horse horse, MultipartFile image, MultipartFile document) {
         if (image != null) {
             horse.setImageUrl(cloudinaryUploadService.uploadImage(image, HORSE_IMAGE_FOLDER));
@@ -187,6 +216,12 @@ public class HorseServiceImpl implements HorseService {
         return request.getReason();
     }
 
+    private void requireUpdateRequest(HorseUpdateRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Horse request is required");
+        }
+    }
+
     private Horse requireHorse(Long horseId) {
         return horseRepository.findById(horseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Horse", "id", horseId));
@@ -201,6 +236,10 @@ public class HorseServiceImpl implements HorseService {
         if (user.getRole() != role) {
             throw new UnauthorizedException(message);
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private HorseResponse mapToResponse(Horse horse) {

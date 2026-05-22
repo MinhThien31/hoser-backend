@@ -2,6 +2,7 @@ package com.minhthien.hoser_backend.service;
 
 import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.JockeyProfileRequest;
+import com.minhthien.hoser_backend.dto.request.JockeyProfileUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.JockeyProfileResponse;
 import com.minhthien.hoser_backend.enums.JockeyStatus;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,7 +15,7 @@ public interface JockeyProfileService {
     JockeyProfileResponse createMyProfile(Long jockeyId, JockeyProfileRequest request,
                                           MultipartFile avatar, MultipartFile licenseDocument);
 
-    JockeyProfileResponse updateMyProfile(Long jockeyId, JockeyProfileRequest request,
+    JockeyProfileResponse updateMyProfile(Long jockeyId, JockeyProfileUpdateRequest request,
                                           MultipartFile avatar, MultipartFile licenseDocument);
 
     List<JockeyProfileResponse> getAvailableJockeys();

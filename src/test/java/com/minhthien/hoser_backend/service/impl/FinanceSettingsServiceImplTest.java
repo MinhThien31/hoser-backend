@@ -52,6 +52,24 @@ class FinanceSettingsServiceImplTest {
     }
 
     @Test
+    void updateFinanceSettingsKeepsExistingPercentWhenNotProvided() {
+        FinanceSettingsServiceImpl service = new FinanceSettingsServiceImpl(financeSettingsRepository);
+        FinanceSettings settings = FinanceSettings.builder()
+                .id(FinanceSettings.SINGLETON_ID)
+                .jockeyHireTaxPercent(new BigDecimal("10.00"))
+                .build();
+        FinanceSettingsRequest request = new FinanceSettingsRequest();
+
+        when(financeSettingsRepository.findById(FinanceSettings.SINGLETON_ID)).thenReturn(Optional.of(settings));
+        when(financeSettingsRepository.save(any(FinanceSettings.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.updateFinanceSettings(request, "admin");
+
+        assertThat(response.getJockeyHireTaxPercent()).isEqualByComparingTo("10.00");
+        assertThat(settings.getUpdatedBy()).isEqualTo("admin");
+    }
+
+    @Test
     void updateFinanceSettingsRejectsOutOfRangePercent() {
         FinanceSettingsServiceImpl service = new FinanceSettingsServiceImpl(financeSettingsRepository);
 

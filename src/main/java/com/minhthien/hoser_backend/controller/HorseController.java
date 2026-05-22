@@ -2,6 +2,7 @@ package com.minhthien.hoser_backend.controller;
 
 import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.HorseRequest;
+import com.minhthien.hoser_backend.dto.request.HorseUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.HorseResponse;
 import com.minhthien.hoser_backend.entity.User;
@@ -62,7 +63,7 @@ public class HorseController {
     public ResponseEntity<ApiResponse<HorseResponse>> updateHorse(
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long id,
-            @Valid @ModelAttribute HorseRequest request) {
+            @Valid @ModelAttribute HorseUpdateRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Horse updated",
                 horseService.updateHorse(currentUser.getId(), id, request, request.getImage(), request.getDocument())));
     }

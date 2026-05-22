@@ -2,6 +2,7 @@ package com.minhthien.hoser_backend.service;
 
 import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.HorseRequest;
+import com.minhthien.hoser_backend.dto.request.HorseUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.HorseResponse;
 import com.minhthien.hoser_backend.enums.HorseStatus;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,7 +20,7 @@ public interface HorseService {
 
     HorseResponse getHorseForViewer(Long viewerId, Long horseId);
 
-    HorseResponse updateHorse(Long ownerId, Long horseId, HorseRequest request, MultipartFile image, MultipartFile document);
+    HorseResponse updateHorse(Long ownerId, Long horseId, HorseUpdateRequest request, MultipartFile image, MultipartFile document);
 
     List<HorseResponse> getAdminHorses(HorseStatus status);
 

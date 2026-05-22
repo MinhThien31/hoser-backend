@@ -89,6 +89,31 @@ class UserPasswordServiceTest {
     }
 
     @Test
+    void updateProfileKeepsExistingFieldsWhenNotProvided() {
+        User user = User.builder()
+                .id(1L)
+                .username("owner")
+                .fullName("Existing Owner")
+                .avatarUrl("https://cdn.example/users/existing.png")
+                .location("Ho Chi Minh City")
+                .build();
+        user.setPhone("0900000000");
+        UserProfileRequest request = new UserProfileRequest();
+        request.setLocation("Da Nang");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponse response = userService.updateProfile(1L, request);
+
+        assertThat(response.getFullName()).isEqualTo("Existing Owner");
+        assertThat(response.getPhone()).isEqualTo("0900000000");
+        assertThat(response.getAvatarUrl()).isEqualTo("https://cdn.example/users/existing.png");
+        assertThat(response.getLocation()).isEqualTo("Da Nang");
+        verify(cloudinaryUploadService, never()).uploadImage(any(), any());
+    }
+
+    @Test
     void updatePasswordRejectsIncorrectCurrentPassword() {
         User user = User.builder()
                 .id(1L)

@@ -2,8 +2,10 @@ package com.minhthien.hoser_backend.service.impl;
 
 import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.HorseRequest;
+import com.minhthien.hoser_backend.dto.request.HorseUpdateRequest;
 import com.minhthien.hoser_backend.dto.request.JockeyInvitationRequest;
 import com.minhthien.hoser_backend.dto.request.JockeyProfileRequest;
+import com.minhthien.hoser_backend.dto.request.JockeyProfileUpdateRequest;
 import com.minhthien.hoser_backend.entity.Horse;
 import com.minhthien.hoser_backend.entity.JockeyInvitation;
 import com.minhthien.hoser_backend.entity.JockeyProfile;
@@ -70,7 +72,7 @@ class Phase4Phase5ServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(horseRepository.findByIdAndOwnerId(100L, 1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> horseService.updateHorse(1L, 100L, horseRequest(), null, null))
+        assertThatThrownBy(() -> horseService.updateHorse(1L, 100L, horseUpdateRequest(), null, null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Horse not found");
 
@@ -85,7 +87,7 @@ class Phase4Phase5ServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(horseRepository.findByIdAndOwnerId(100L, 1L)).thenReturn(Optional.of(horse));
 
-        assertThatThrownBy(() -> horseService.updateHorse(1L, 100L, horseRequest(), null, null))
+        assertThatThrownBy(() -> horseService.updateHorse(1L, 100L, horseUpdateRequest(), null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Approved or suspended horses cannot be updated by owner");
 
@@ -142,12 +144,51 @@ class Phase4Phase5ServiceTest {
         when(horseRepository.findByIdAndOwnerId(100L, 1L)).thenReturn(Optional.of(horse));
         when(horseRepository.save(any(Horse.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = horseService.updateHorse(1L, 100L, horseRequest(), null, null);
+        var response = horseService.updateHorse(1L, 100L, horseUpdateRequest(), null, null);
 
         assertThat(response.getImageUrl()).isEqualTo("https://cdn.example/existing-horse.jpg");
         assertThat(response.getDocumentUrl()).isEqualTo("https://cdn.example/existing-vet.pdf");
         verify(cloudinaryUploadService, never()).uploadImage(any(), any());
         verify(cloudinaryUploadService, never()).uploadDocument(any(), any());
+    }
+
+    @Test
+    void updateHorseKeepsExistingFieldsWhenNotProvided() {
+        HorseServiceImpl horseService = horseService();
+        User owner = user(1L, "owner-one", UserRole.OWNER);
+        Horse horse = horse(100L, owner, HorseStatus.REJECTED);
+        horse.setBreed("Arabian");
+        horse.setAge(5);
+        horse.setGender("Male");
+        horse.setColor("Bay");
+        horse.setHeightCm(new BigDecimal("155.50"));
+        horse.setWeightKg(new BigDecimal("430.00"));
+        horse.setImageUrl("https://cdn.example/existing-horse.jpg");
+        horse.setDocumentUrl("https://cdn.example/existing-vet.pdf");
+        horse.setReviewReason("Old reason");
+        horse.setReviewedBy(9L);
+        horse.setReviewedAt(LocalDateTime.now());
+
+        HorseUpdateRequest request = new HorseUpdateRequest();
+        request.setName("Thunder");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+        when(horseRepository.findByIdAndOwnerId(100L, 1L)).thenReturn(Optional.of(horse));
+        when(horseRepository.save(any(Horse.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = horseService.updateHorse(1L, 100L, request, null, null);
+
+        assertThat(response.getName()).isEqualTo("Thunder");
+        assertThat(response.getBreed()).isEqualTo("Arabian");
+        assertThat(response.getAge()).isEqualTo(5);
+        assertThat(response.getGender()).isEqualTo("Male");
+        assertThat(response.getColor()).isEqualTo("Bay");
+        assertThat(response.getHeightCm()).isEqualByComparingTo("155.50");
+        assertThat(response.getWeightKg()).isEqualByComparingTo("430.00");
+        assertThat(response.getImageUrl()).isEqualTo("https://cdn.example/existing-horse.jpg");
+        assertThat(response.getDocumentUrl()).isEqualTo("https://cdn.example/existing-vet.pdf");
+        assertThat(response.getStatus()).isEqualTo(HorseStatus.PENDING);
+        assertThat(response.getReviewReason()).isNull();
     }
 
     @Test
@@ -241,12 +282,54 @@ class Phase4Phase5ServiceTest {
         when(jockeyProfileRepository.findByUserId(2L)).thenReturn(Optional.of(profile));
         when(jockeyProfileRepository.save(any(JockeyProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = jockeyProfileService.updateMyProfile(2L, jockeyProfileRequest(), null, null);
+        var response = jockeyProfileService.updateMyProfile(2L, jockeyProfileUpdateRequest(), null, null);
 
         assertThat(response.getAvatarUrl()).isEqualTo("https://cdn.example/existing-avatar.png");
         assertThat(response.getLicenseDocumentUrl()).isEqualTo("https://cdn.example/existing-license.pdf");
         verify(cloudinaryUploadService, never()).uploadImage(any(), any());
         verify(cloudinaryUploadService, never()).uploadDocument(any(), any());
+    }
+
+    @Test
+    void updateJockeyProfileKeepsExistingFieldsWhenNotProvided() {
+        JockeyProfileServiceImpl jockeyProfileService = jockeyProfileService();
+        User jockey = user(2L, "jockey-one", UserRole.JOCKEY);
+        JockeyProfile profile = jockeyProfile(20L, jockey, JockeyStatus.REJECTED);
+        profile.setExperienceYears(4);
+        profile.setHeightCm(new BigDecimal("170.00"));
+        profile.setWeightKg(new BigDecimal("60.00"));
+        profile.setBio("Old bio");
+        profile.setAwards("Golden Cup");
+        profile.setAchievements("10 wins");
+        profile.setSpecialties("Sprint");
+        profile.setAvatarUrl("https://cdn.example/existing-avatar.png");
+        profile.setLicenseDocumentUrl("https://cdn.example/existing-license.pdf");
+        profile.setReviewReason("Old reason");
+        profile.setReviewedBy(9L);
+        profile.setReviewedAt(LocalDateTime.now());
+
+        JockeyProfileUpdateRequest request = new JockeyProfileUpdateRequest();
+        request.setHirePrice(new BigDecimal("750.00"));
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(jockey));
+        when(jockeyProfileRepository.findByUserId(2L)).thenReturn(Optional.of(profile));
+        when(jockeyProfileRepository.save(any(JockeyProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = jockeyProfileService.updateMyProfile(2L, request, null, null);
+
+        assertThat(response.getLicenseNumber()).isEqualTo("LIC-2");
+        assertThat(response.getExperienceYears()).isEqualTo(4);
+        assertThat(response.getHeightCm()).isEqualByComparingTo("170.00");
+        assertThat(response.getWeightKg()).isEqualByComparingTo("60.00");
+        assertThat(response.getHirePrice()).isEqualByComparingTo("750.00");
+        assertThat(response.getBio()).isEqualTo("Old bio");
+        assertThat(response.getAwards()).isEqualTo("Golden Cup");
+        assertThat(response.getAchievements()).isEqualTo("10 wins");
+        assertThat(response.getSpecialties()).isEqualTo("Sprint");
+        assertThat(response.getAvatarUrl()).isEqualTo("https://cdn.example/existing-avatar.png");
+        assertThat(response.getLicenseDocumentUrl()).isEqualTo("https://cdn.example/existing-license.pdf");
+        assertThat(response.getStatus()).isEqualTo(JockeyStatus.PENDING);
+        assertThat(response.getReviewReason()).isNull();
     }
 
     @Test
@@ -257,7 +340,7 @@ class Phase4Phase5ServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(jockey));
         when(jockeyProfileRepository.findByUserId(2L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> jockeyProfileService.updateMyProfile(2L, jockeyProfileRequest(), null, null))
+        assertThatThrownBy(() -> jockeyProfileService.updateMyProfile(2L, jockeyProfileUpdateRequest(), null, null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("JockeyProfile not found with userId: '2'");
 
@@ -273,7 +356,7 @@ class Phase4Phase5ServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(jockey));
         when(jockeyProfileRepository.findByUserId(2L)).thenReturn(Optional.of(profile));
 
-        assertThatThrownBy(() -> jockeyProfileService.updateMyProfile(2L, jockeyProfileRequest(), null, null))
+        assertThatThrownBy(() -> jockeyProfileService.updateMyProfile(2L, jockeyProfileUpdateRequest(), null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Suspended jockey profile cannot be updated");
 
@@ -485,6 +568,12 @@ class Phase4Phase5ServiceTest {
         return request;
     }
 
+    private HorseUpdateRequest horseUpdateRequest() {
+        HorseUpdateRequest request = new HorseUpdateRequest();
+        request.setName("Lightning");
+        return request;
+    }
+
     private JockeyInvitationRequest invitationRequest(Long horseId, Long jockeyId) {
         JockeyInvitationRequest request = new JockeyInvitationRequest();
         request.setHorseId(horseId);
@@ -495,6 +584,16 @@ class Phase4Phase5ServiceTest {
 
     private JockeyProfileRequest jockeyProfileRequest() {
         JockeyProfileRequest request = new JockeyProfileRequest();
+        request.setLicenseNumber("LIC-2");
+        request.setHirePrice(new BigDecimal("500.00"));
+        request.setAwards("Golden Cup");
+        request.setAchievements("10 wins");
+        request.setSpecialties("Sprint");
+        return request;
+    }
+
+    private JockeyProfileUpdateRequest jockeyProfileUpdateRequest() {
+        JockeyProfileUpdateRequest request = new JockeyProfileUpdateRequest();
         request.setLicenseNumber("LIC-2");
         request.setHirePrice(new BigDecimal("500.00"));
         request.setAwards("Golden Cup");

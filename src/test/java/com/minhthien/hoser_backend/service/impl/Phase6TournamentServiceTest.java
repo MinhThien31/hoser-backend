@@ -3,6 +3,7 @@ package com.minhthien.hoser_backend.service.impl;
 import com.minhthien.hoser_backend.dto.request.TournamentPrizeRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentRoundRequest;
+import com.minhthien.hoser_backend.dto.request.TournamentUpdateRequest;
 import com.minhthien.hoser_backend.entity.AdminAuditLog;
 import com.minhthien.hoser_backend.entity.Tournament;
 import com.minhthien.hoser_backend.entity.TournamentPrize;
@@ -107,6 +108,66 @@ class Phase6TournamentServiceTest {
         assertThat(auditCaptor.getAllValues())
                 .extracting(AdminAuditLog::getAction)
                 .containsOnly("TOURNAMENT_STATUS_UPDATED");
+    }
+
+    @Test
+    void updateTournamentKeepsRoundsAndPrizesWhenListsAreNotProvided() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+        TournamentUpdateRequest request = new TournamentUpdateRequest();
+        request.setDescription("Updated description");
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+        when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.updateTournament(9L, 10L, request);
+
+        assertThat(response.getDescription()).isEqualTo("Updated description");
+        assertThat(response.getName()).isEqualTo("Summer Derby");
+        assertThat(response.getRounds()).hasSize(2);
+        assertThat(response.getPrizes()).hasSize(1);
+    }
+
+    @Test
+    void updateTournamentClearsRoundsAndPrizesWhenEmptyListsAreProvided() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+        TournamentUpdateRequest request = new TournamentUpdateRequest();
+        request.setRounds(List.of());
+        request.setPrizes(List.of());
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+        when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.updateTournament(9L, 10L, request);
+
+        assertThat(response.getRounds()).isEmpty();
+        assertThat(response.getPrizes()).isEmpty();
+    }
+
+    @Test
+    void updateTournamentReplacesRoundsAndPrizesWhenListsAreProvided() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+        TournamentUpdateRequest request = new TournamentUpdateRequest();
+        request.setRounds(List.of(round("Final Only", 1, 1, 2, 8, 1)));
+        request.setPrizes(List.of(prize(1, "2000000.00"), prize(2, "1000000.00")));
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+        when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.updateTournament(9L, 10L, request);
+
+        assertThat(response.getRounds()).hasSize(1);
+        assertThat(response.getRounds().get(0).getName()).isEqualTo("Final Only");
+        assertThat(response.getPrizes()).hasSize(2);
+        assertThat(response.getPrizes().get(0).getAmount()).isEqualByComparingTo("2000000.00");
     }
 
     @Test

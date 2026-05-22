@@ -30,9 +30,16 @@ public class FinanceSettingsServiceImpl implements FinanceSettingsService {
     @Override
     @Transactional
     public FinanceSettingsResponse updateFinanceSettings(FinanceSettingsRequest request, String updatedBy) {
-        BigDecimal percent = normalizePercent(request.getJockeyHireTaxPercent());
+        if (request == null) {
+            throw new BadRequestException("Finance settings request is required");
+        }
+        BigDecimal percent = request.getJockeyHireTaxPercent() == null
+                ? null
+                : normalizePercent(request.getJockeyHireTaxPercent());
         FinanceSettings settings = getOrCreateSettings();
-        settings.setJockeyHireTaxPercent(percent);
+        if (percent != null) {
+            settings.setJockeyHireTaxPercent(percent);
+        }
         settings.setUpdatedBy(updatedBy);
         return mapToResponse(financeSettingsRepository.save(settings));
     }
@@ -52,7 +59,7 @@ public class FinanceSettingsServiceImpl implements FinanceSettingsService {
     }
 
     private BigDecimal normalizePercent(BigDecimal percent) {
-        if (percent == null || percent.compareTo(MIN_PERCENT) < 0 || percent.compareTo(MAX_PERCENT) > 0) {
+        if (percent.compareTo(MIN_PERCENT) < 0 || percent.compareTo(MAX_PERCENT) > 0) {
             throw new BadRequestException("Jockey hire tax percent must be between 0 and 100");
         }
         return percent.setScale(2, RoundingMode.HALF_UP);

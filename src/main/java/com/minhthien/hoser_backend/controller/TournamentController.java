@@ -1,6 +1,7 @@
 package com.minhthien.hoser_backend.controller;
 
 import com.minhthien.hoser_backend.dto.request.TournamentRequest;
+import com.minhthien.hoser_backend.dto.request.TournamentUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.TournamentResponse;
 import com.minhthien.hoser_backend.entity.User;
@@ -34,7 +35,7 @@ public class TournamentController {
     public ResponseEntity<ApiResponse<TournamentResponse>> updateTournament(
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long id,
-            @Valid @RequestBody TournamentRequest request) {
+            @Valid @RequestBody TournamentUpdateRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Tournament updated",
                 tournamentService.updateTournament(currentUser.getId(), id, request)));
     }

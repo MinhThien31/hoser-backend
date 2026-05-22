@@ -3,6 +3,7 @@ package com.minhthien.hoser_backend.service.impl;
 import com.minhthien.hoser_backend.dto.request.TournamentPrizeRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentRoundRequest;
+import com.minhthien.hoser_backend.dto.request.TournamentUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.TournamentPrizeResponse;
 import com.minhthien.hoser_backend.dto.response.TournamentResponse;
 import com.minhthien.hoser_backend.dto.response.TournamentRoundResponse;
@@ -60,15 +61,16 @@ public class TournamentServiceImpl implements TournamentService {
 
     @Override
     @Transactional
-    public TournamentResponse updateTournament(Long adminId, Long tournamentId, TournamentRequest request) {
+    public TournamentResponse updateTournament(Long adminId, Long tournamentId, TournamentUpdateRequest request) {
         User admin = requireAdmin(adminId);
-        validateBaseRequest(request);
+        requireUpdateRequest(request);
         Tournament tournament = requireTournament(tournamentId);
         if (tournament.getStatus() != TournamentStatus.DRAFT && tournament.getStatus() != TournamentStatus.PUBLISHED) {
             throw new BadRequestException("Only draft or published tournaments can be updated");
         }
 
-        applyRequest(tournament, request, admin.getUsername());
+        applyUpdateRequest(tournament, request, admin.getUsername());
+        validateBaseTournament(tournament);
         Tournament saved = tournamentRepository.save(tournament);
         recordAudit(admin, "TOURNAMENT_UPDATED", saved, "Tournament setup updated");
         return mapToResponse(saved);
@@ -152,6 +154,52 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.replacePrizes(mapPrizes(request.getPrizes()));
     }
 
+    private void applyUpdateRequest(Tournament tournament, TournamentUpdateRequest request, String updatedBy) {
+        if (request.getName() != null) {
+            tournament.setName(request.getName());
+        }
+        if (request.getDescription() != null) {
+            tournament.setDescription(request.getDescription());
+        }
+        if (request.getLocation() != null) {
+            tournament.setLocation(request.getLocation());
+        }
+        if (request.getRegistrationOpenAt() != null) {
+            tournament.setRegistrationOpenAt(request.getRegistrationOpenAt());
+        }
+        if (request.getRegistrationCloseAt() != null) {
+            tournament.setRegistrationCloseAt(request.getRegistrationCloseAt());
+        }
+        if (request.getStartAt() != null) {
+            tournament.setStartAt(request.getStartAt());
+        }
+        if (request.getEndAt() != null) {
+            tournament.setEndAt(request.getEndAt());
+        }
+        if (request.getCheckInDeadlineAt() != null) {
+            tournament.setCheckInDeadlineAt(request.getCheckInDeadlineAt());
+        }
+        if (request.getEntryFee() != null) {
+            tournament.setEntryFee(request.getEntryFee());
+        }
+        if (request.getDepositAmount() != null) {
+            tournament.setDepositAmount(request.getDepositAmount());
+        }
+        if (request.getMinTeams() != null) {
+            tournament.setMinTeams(request.getMinTeams());
+        }
+        if (request.getMaxTeams() != null) {
+            tournament.setMaxTeams(request.getMaxTeams());
+        }
+        tournament.setUpdatedBy(updatedBy);
+        if (request.getRounds() != null) {
+            tournament.replaceRounds(mapRounds(request.getRounds()));
+        }
+        if (request.getPrizes() != null) {
+            tournament.replacePrizes(mapPrizes(request.getPrizes()));
+        }
+    }
+
     private List<TournamentRound> mapRounds(List<TournamentRoundRequest> requests) {
         if (requests == null) {
             return List.of();
@@ -202,6 +250,26 @@ public class TournamentServiceImpl implements TournamentService {
         validateTeamLimits(request.getMinTeams(), request.getMaxTeams());
         requireNonNegative(defaultZero(request.getEntryFee()), "Entry fee must not be negative");
         requireNonNegative(defaultZero(request.getDepositAmount()), "Deposit amount must not be negative");
+    }
+
+    private void requireUpdateRequest(TournamentUpdateRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Tournament request is required");
+        }
+    }
+
+    private void validateBaseTournament(Tournament tournament) {
+        if (!hasText(tournament.getName())) {
+            throw new BadRequestException("Tournament name is required");
+        }
+        if (!hasText(tournament.getLocation())) {
+            throw new BadRequestException("Location is required");
+        }
+        validateTimeWindow(tournament.getRegistrationOpenAt(), tournament.getRegistrationCloseAt(),
+                tournament.getStartAt(), tournament.getEndAt(), tournament.getCheckInDeadlineAt());
+        validateTeamLimits(tournament.getMinTeams(), tournament.getMaxTeams());
+        requireNonNegative(defaultZero(tournament.getEntryFee()), "Entry fee must not be negative");
+        requireNonNegative(defaultZero(tournament.getDepositAmount()), "Deposit amount must not be negative");
     }
 
     private void validateReadyForPublish(Tournament tournament) {
