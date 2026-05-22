@@ -3,6 +3,7 @@ package com.minhthien.hoser_backend.service.impl;
 
 import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.entity.User;
+import com.minhthien.hoser_backend.enums.RoleApprovalStatus;
 import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.exception.ResourceNotFoundException;
 import com.minhthien.hoser_backend.repository.UserRepository;
@@ -66,6 +67,17 @@ public class AdminServiceImpl implements AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         user.setRole(role);
+        if (role == UserRole.USER) {
+            user.setPendingRole(null);
+            user.setRoleApprovalStatus(RoleApprovalStatus.NONE);
+            user.setRoleReviewReason(null);
+            user.setRoleReviewedBy(null);
+            user.setRoleReviewedAt(null);
+        } else {
+            user.setPendingRole(role);
+            user.setRoleApprovalStatus(RoleApprovalStatus.APPROVED);
+            user.setRoleReviewReason(null);
+        }
         return mapToResponse(userRepository.save(user));
     }
 
@@ -74,7 +86,14 @@ public class AdminServiceImpl implements AdminService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
                 .role(user.getRole())
+                .pendingRole(user.getPendingRole())
+                .roleApprovalStatus(user.getRoleApprovalStatus())
+                .roleReviewReason(user.getRoleReviewReason())
+                .roleReviewedBy(user.getRoleReviewedBy())
+                .roleReviewedAt(user.getRoleReviewedAt())
                 .active(user.getActive())
                 .avatarUrl(user.getAvatarUrl())
                 .createdAt(user.getCreatedAt())

@@ -1,6 +1,7 @@
 package com.minhthien.hoser_backend.dto.response;
 
 import com.minhthien.hoser_backend.enums.UserRole;
+import com.minhthien.hoser_backend.enums.RoleApprovalStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,11 @@ public class UserResponse {
     private String fullName;
     private String phone;
     private UserRole role;
+    private UserRole pendingRole;
+    private RoleApprovalStatus roleApprovalStatus;
+    private String roleReviewReason;
+    private Long roleReviewedBy;
+    private LocalDateTime roleReviewedAt;
     private Boolean active;
     private String avatarUrl;
     private String location;

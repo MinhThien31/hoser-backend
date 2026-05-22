@@ -46,15 +46,6 @@ public class AuthController {
     }
 
     @SecurityRequirement(name = "bearerAuth")
-    @PutMapping("/me/role")
-    public ResponseEntity<ApiResponse<UserResponse>> selectRole(
-            @AuthenticationPrincipal User currentUser,
-            @Valid @RequestBody UserRoleRequest request) {
-        UserResponse response = userService.selectRole(currentUser.getId(), request.getRole());
-        return ResponseEntity.ok(ApiResponse.success("Role selected", response));
-    }
-
-    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/password")
     public ResponseEntity<ApiResponse<Void>> updatePassword(
             @AuthenticationPrincipal User currentUser,

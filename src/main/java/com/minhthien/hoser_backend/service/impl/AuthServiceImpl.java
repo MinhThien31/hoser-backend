@@ -11,6 +11,7 @@ import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.entity.PasswordResetOtp;
 import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.enums.UserRole;
+import com.minhthien.hoser_backend.enums.RoleApprovalStatus;
 import com.minhthien.hoser_backend.exception.BadRequestException;
 import com.minhthien.hoser_backend.exception.DuplicateResourceException;
 import com.minhthien.hoser_backend.exception.ResourceNotFoundException;
@@ -170,6 +171,9 @@ public class AuthServiceImpl implements AuthService {
                     .username(user.getUsername())
                     .email(user.getEmail())
                     .role(user.getRole())
+                    .pendingRole(user.getPendingRole())
+                    .roleApprovalStatus(user.getRoleApprovalStatus())
+                    .roleReviewReason(user.getRoleReviewReason())
                     .build();
         } catch (BadRequestException e) {
             throw e;
@@ -219,6 +223,9 @@ public class AuthServiceImpl implements AuthService {
                     .username(user.getUsername())
                     .email(user.getEmail())
                     .role(user.getRole())
+                    .pendingRole(user.getPendingRole())
+                    .roleApprovalStatus(user.getRoleApprovalStatus())
+                    .roleReviewReason(user.getRoleReviewReason())
                     .build();
         } catch (BadRequestException e) {
             throw e;
@@ -237,12 +244,23 @@ public class AuthServiceImpl implements AuthService {
                 .phone(user.getPhone())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .pendingRole(user.getPendingRole())
+                .roleApprovalStatus(user.getRoleApprovalStatus())
+                .roleReviewReason(user.getRoleReviewReason())
                 .build();
     }
 
     private void ensureDefaultUserRole(User user) {
+        boolean changed = false;
         if (user.getRole() == null) {
             user.setRole(UserRole.USER);
+            changed = true;
+        }
+        if (user.getRoleApprovalStatus() == null) {
+            user.setRoleApprovalStatus(RoleApprovalStatus.NONE);
+            changed = true;
+        }
+        if (changed) {
             userRepository.save(user);
         }
     }
@@ -252,7 +270,14 @@ public class AuthServiceImpl implements AuthService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
                 .role(user.getRole())
+                .pendingRole(user.getPendingRole())
+                .roleApprovalStatus(user.getRoleApprovalStatus())
+                .roleReviewReason(user.getRoleReviewReason())
+                .roleReviewedBy(user.getRoleReviewedBy())
+                .roleReviewedAt(user.getRoleReviewedAt())
                 .active(user.getActive())
                 .avatarUrl(user.getAvatarUrl())
                 .createdAt(user.getCreatedAt())

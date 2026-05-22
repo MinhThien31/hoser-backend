@@ -40,13 +40,6 @@ public class JockeyProfileController {
                         currentUser.getId(), request, request.getAvatar(), request.getLicenseDocument())));
     }
 
-    @PostMapping(value = "/jockey-profiles", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<JockeyProfileResponse>> createMyProfileAlias(
-            @AuthenticationPrincipal User currentUser,
-            @Valid @ModelAttribute JockeyProfileRequest request) {
-        return createMyProfile(currentUser, request);
-    }
-
     @PutMapping(value = "/jockey/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<JockeyProfileResponse>> updateMyProfile(
             @AuthenticationPrincipal User currentUser,

@@ -1,5 +1,7 @@
 package com.minhthien.hoser_backend.service.impl;
 
+import com.minhthien.hoser_backend.entity.User;
+import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.service.MailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -13,7 +15,10 @@ import java.nio.charset.StandardCharsets;
 
 @Service
 public class MailServiceImpl implements MailService {
-    private static final String SUBJECT = "Mã OTP đặt lại mật khẩu HORSE";
+    private static final String BRAND = "HORSE";
+    private static final String OTP_SUBJECT = "HORSE - Mã OTP đặt lại mật khẩu";
+    private static final String ROLE_APPROVED_SUBJECT = "HORSE - Hồ sơ đăng ký vai trò đã được duyệt";
+    private static final String ROLE_REJECTED_SUBJECT = "HORSE - Hồ sơ đăng ký vai trò cần bổ sung";
     private static final int OTP_EXPIRES_IN_MINUTES = 10;
 
     private final JavaMailSender mailSender;
@@ -24,8 +29,37 @@ public class MailServiceImpl implements MailService {
 
     @Override
     public void sendOtp(String email, String otp) {
-        MimeMessage message = mailSender.createMimeMessage();
         String formattedOtp = formatOtp(otp);
+        sendHtmlEmail(
+                email,
+                OTP_SUBJECT,
+                buildOtpPlainText(formattedOtp),
+                buildOtpHtml(formattedOtp)
+        );
+    }
+
+    @Override
+    public void sendRoleApplicationApproved(User user, UserRole role) {
+        sendHtmlEmail(
+                user.getEmail(),
+                ROLE_APPROVED_SUBJECT,
+                buildApprovedPlainText(user, role),
+                buildApprovedHtml(user, role)
+        );
+    }
+
+    @Override
+    public void sendRoleApplicationRejected(User user, UserRole role, String reason) {
+        sendHtmlEmail(
+                user.getEmail(),
+                ROLE_REJECTED_SUBJECT,
+                buildRejectedPlainText(user, role, reason),
+                buildRejectedHtml(user, role, reason)
+        );
+    }
+
+    private void sendHtmlEmail(String to, String subject, String plainText, String html) {
+        MimeMessage message = mailSender.createMimeMessage();
 
         try {
             MimeMessageHelper helper = new MimeMessageHelper(
@@ -33,11 +67,11 @@ public class MailServiceImpl implements MailService {
                     MimeMessageHelper.MULTIPART_MODE_MIXED,
                     StandardCharsets.UTF_8.name()
             );
-            helper.setTo(email);
-            helper.setSubject(SUBJECT);
-            helper.setText(buildPlainText(formattedOtp), buildHtml(formattedOtp));
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(plainText, html);
         } catch (MessagingException ex) {
-            throw new MailPreparationException("Could not prepare OTP email", ex);
+            throw new MailPreparationException("Could not prepare email", ex);
         }
 
         mailSender.send(message);
@@ -47,7 +81,7 @@ public class MailServiceImpl implements MailService {
         return otp == null ? "" : otp.replaceAll("(.)(?=.)", "$1 ");
     }
 
-    private String buildPlainText(String formattedOtp) {
+    private String buildOtpPlainText(String formattedOtp) {
         return """
                 HORSE
 
@@ -59,8 +93,109 @@ public class MailServiceImpl implements MailService {
                 """.formatted(formattedOtp, OTP_EXPIRES_IN_MINUTES);
     }
 
-    private String buildHtml(String formattedOtp) {
+    private String buildOtpHtml(String formattedOtp) {
         String safeOtp = HtmlUtils.htmlEscape(formattedOtp);
+
+        return layoutHtml(
+                OTP_SUBJECT,
+                "Đặt lại mật khẩu",
+                "Mã xác thực của bạn",
+                "Nhập mã OTP bên dưới để tiếp tục đặt lại mật khẩu tài khoản HORSE.",
+                """
+                        <div style="display:inline-block;background:#eefcf8;border:1px solid #99f6e4;border-radius:8px;padding:16px 24px;font-size:32px;line-height:40px;font-weight:700;color:#0f766e;letter-spacing:6px;">%s</div>
+                        <p style="margin:24px auto 0;max-width:420px;font-size:14px;line-height:22px;color:#526071;">Mã này sẽ hết hạn sau <strong style="color:#172033;">%d phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+                        """.formatted(safeOtp, OTP_EXPIRES_IN_MINUTES),
+                """
+                        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px 16px;font-size:13px;line-height:20px;color:#9a3412;">
+                            Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này. Tài khoản của bạn vẫn an toàn.
+                        </div>
+                        """,
+                "#0f766e",
+                "#d7f7f1"
+        );
+    }
+
+    private String buildApprovedPlainText(User user, UserRole role) {
+        return """
+                HORSE
+
+                Xin chào %s,
+
+                Hồ sơ đăng ký vai trò %s của bạn đã được admin duyệt.
+
+                Bạn có thể đăng nhập lại hoặc tải lại trang để bắt đầu sử dụng các chức năng dành cho vai trò này.
+
+                Email này được gửi tự động từ HORSE.
+                """.formatted(displayName(user), roleLabel(role));
+    }
+
+    private String buildApprovedHtml(User user, UserRole role) {
+        String safeName = HtmlUtils.htmlEscape(displayName(user));
+        String safeRole = HtmlUtils.htmlEscape(roleLabel(role));
+
+        return layoutHtml(
+                ROLE_APPROVED_SUBJECT,
+                "Duyệt hồ sơ vai trò",
+                "Hồ sơ của bạn đã được duyệt",
+                "Xin chào " + safeName + ", hồ sơ đăng ký vai trò của bạn đã được admin duyệt.",
+                """
+                        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:18px 20px;text-align:left;">
+                            <div style="font-size:13px;line-height:18px;color:#047857;font-weight:700;text-transform:uppercase;">Vai trò được duyệt</div>
+                            <div style="margin-top:6px;font-size:22px;line-height:30px;color:#064e3b;font-weight:700;">%s</div>
+                        </div>
+                        <a href="#" style="display:inline-block;margin-top:24px;background:#0f766e;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 18px;font-size:14px;line-height:20px;font-weight:700;">Đăng nhập và bắt đầu sử dụng HORSE</a>
+                        <p style="margin:18px auto 0;max-width:420px;font-size:14px;line-height:22px;color:#526071;">Nếu bạn đang đăng nhập, hãy tải lại trang để cập nhật quyền mới.</p>
+                        """.formatted(safeRole),
+                "",
+                "#0f766e",
+                "#d7f7f1"
+        );
+    }
+
+    private String buildRejectedPlainText(User user, UserRole role, String reason) {
+        return """
+                HORSE
+
+                Xin chào %s,
+
+                Hồ sơ đăng ký vai trò %s của bạn cần bổ sung thông tin.
+
+                Lý do từ admin: %s
+
+                Bạn có thể cập nhật hồ sơ và gửi lại để admin xem xét.
+
+                Email này được gửi tự động từ HORSE.
+                """.formatted(displayName(user), roleLabel(role), reason == null ? "" : reason);
+    }
+
+    private String buildRejectedHtml(User user, UserRole role, String reason) {
+        String safeName = HtmlUtils.htmlEscape(displayName(user));
+        String safeRole = HtmlUtils.htmlEscape(roleLabel(role));
+        String safeReason = HtmlUtils.htmlEscape(reason == null ? "" : reason);
+
+        return layoutHtml(
+                ROLE_REJECTED_SUBJECT,
+                "Cần bổ sung hồ sơ",
+                "Hồ sơ của bạn cần cập nhật",
+                "Xin chào " + safeName + ", hồ sơ đăng ký vai trò " + safeRole + " hiện chưa được duyệt.",
+                """
+                        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:18px 20px;text-align:left;">
+                            <div style="font-size:13px;line-height:18px;color:#9a3412;font-weight:700;text-transform:uppercase;">Lý do từ admin</div>
+                            <div style="margin-top:8px;font-size:15px;line-height:24px;color:#7c2d12;">%s</div>
+                        </div>
+                        <p style="margin:24px auto 0;max-width:420px;font-size:14px;line-height:22px;color:#526071;">Bạn có thể chỉnh sửa hồ sơ hoặc gửi lại đăng ký vai trò khác sau khi cập nhật thông tin cần thiết.</p>
+                        """.formatted(safeReason),
+                "",
+                "#b45309",
+                "#ffedd5"
+        );
+    }
+
+    private String layoutHtml(String title, String subtitle, String heading, String intro, String mainContent,
+                              String noticeContent, String headerColor, String subtitleColor) {
+        String safeTitle = HtmlUtils.htmlEscape(title);
+        String safeSubtitle = HtmlUtils.htmlEscape(subtitle);
+        String safeHeading = HtmlUtils.htmlEscape(heading);
 
         return """
                 <!doctype html>
@@ -76,26 +211,19 @@ public class MailServiceImpl implements MailService {
                             <td align="center">
                                 <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e6edf5;">
                                     <tr>
-                                        <td style="background:#0f766e;padding:24px 28px;text-align:center;">
-                                            <div style="font-size:24px;line-height:32px;font-weight:700;color:#ffffff;letter-spacing:0;">HORSE</div>
-                                            <div style="font-size:14px;line-height:20px;color:#d7f7f1;margin-top:4px;">Đặt lại mật khẩu</div>
+                                        <td style="background:%s;padding:24px 28px;text-align:center;">
+                                            <div style="font-size:24px;line-height:32px;font-weight:700;color:#ffffff;letter-spacing:0;">%s</div>
+                                            <div style="font-size:14px;line-height:20px;color:%s;margin-top:4px;">%s</div>
                                         </td>
                                     </tr>
                                     <tr>
                                         <td style="padding:32px 28px 28px;text-align:center;">
-                                            <h1 style="margin:0 0 12px;font-size:22px;line-height:30px;color:#172033;font-weight:700;">Mã xác thực của bạn</h1>
-                                            <p style="margin:0 auto 24px;max-width:420px;font-size:15px;line-height:24px;color:#526071;">Nhập mã OTP bên dưới để tiếp tục đặt lại mật khẩu tài khoản HORSE.</p>
-                                            <div style="display:inline-block;background:#eefcf8;border:1px solid #99f6e4;border-radius:8px;padding:16px 24px;font-size:32px;line-height:40px;font-weight:700;color:#0f766e;letter-spacing:6px;">%s</div>
-                                            <p style="margin:24px auto 0;max-width:420px;font-size:14px;line-height:22px;color:#526071;">Mã này sẽ hết hạn sau <strong style="color:#172033;">%d phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+                                            <h1 style="margin:0 0 12px;font-size:22px;line-height:30px;color:#172033;font-weight:700;">%s</h1>
+                                            <p style="margin:0 auto 24px;max-width:420px;font-size:15px;line-height:24px;color:#526071;">%s</p>
+                                            %s
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <td style="padding:0 28px 28px;">
-                                            <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px 16px;font-size:13px;line-height:20px;color:#9a3412;">
-                                                Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này. Tài khoản của bạn vẫn an toàn.
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    %s
                                     <tr>
                                         <td style="background:#f8fafc;padding:18px 28px;text-align:center;font-size:12px;line-height:18px;color:#7b8794;">
                                             Email này được gửi tự động từ HORSE.
@@ -107,6 +235,47 @@ public class MailServiceImpl implements MailService {
                     </table>
                 </body>
                 </html>
-                """.formatted(SUBJECT, safeOtp, OTP_EXPIRES_IN_MINUTES);
+                """.formatted(
+                safeTitle,
+                headerColor,
+                BRAND,
+                subtitleColor,
+                safeSubtitle,
+                safeHeading,
+                intro,
+                mainContent,
+                noticeRow(noticeContent)
+        );
+    }
+
+    private String noticeRow(String noticeContent) {
+        if (noticeContent == null || noticeContent.isBlank()) {
+            return "";
+        }
+        return """
+                <tr>
+                    <td style="padding:0 28px 28px;">
+                        %s
+                    </td>
+                </tr>
+                """.formatted(noticeContent);
+    }
+
+    private String displayName(User user) {
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            return user.getFullName();
+        }
+        return user.getUsername();
+    }
+
+    private String roleLabel(UserRole role) {
+        return switch (role) {
+            case OWNER -> "Chủ ngựa";
+            case JOCKEY -> "Nài ngựa";
+            case SPECTATOR -> "Khán giả";
+            case REFEREE -> "Trọng tài";
+            case ADMIN -> "Quản trị viên";
+            case USER -> "Người dùng";
+        };
     }
 }

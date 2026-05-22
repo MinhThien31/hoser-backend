@@ -157,11 +157,18 @@ class AllApiSmokeTest {
         assertThat(login.getResponse().getContentAsString()).contains("token");
 
         assertOk(get("/api/v1/auth/me").header("Authorization", bearer(userToken)));
-        assertOk(putJson("/api/v1/auth/me/role", userToken, """
+        assertOk(postJson("/api/v1/role-applications/spectator", userToken, """
                 {
-                  "role": "USER"
+                  "displayName": "Smoke Fan",
+                  "phone": "0900000001",
+                  "location": "Ho Chi Minh City",
+                  "favoriteHorseBreed": "Thoroughbred",
+                  "bio": "Smoke spectator"
                 }
                 """));
+        assertOk(get("/api/v1/role-applications/me").header("Authorization", bearer(userToken)));
+        assertOk(get("/api/v1/admin/role-applications?role=SPECTATOR&status=PENDING")
+                .header("Authorization", bearer(adminToken)));
         assertOk(putJson("/api/v1/auth/password", userToken, """
                 {
                   "currentPassword": "Password123!",
@@ -272,7 +279,7 @@ class AllApiSmokeTest {
                 .header("Authorization", bearer(adminToken)));
 
         assertNonServerError(get("/api/v1/jockey/profile").header("Authorization", bearer(jockeyToken)));
-        assertOk(multipart("/api/v1/jockey-profiles")
+        assertOk(multipart("/api/v1/jockey/profile")
                 .param("licenseNumber", "SMOKE-LICENSE")
                 .param("experienceYears", "3")
                 .param("hirePrice", "50000")
@@ -579,7 +586,18 @@ class AllApiSmokeTest {
         @Bean
         @Primary
         MailService mailService() {
-            return (email, otp) -> {
+            return new MailService() {
+                @Override
+                public void sendOtp(String email, String otp) {
+                }
+
+                @Override
+                public void sendRoleApplicationApproved(User user, UserRole role) {
+                }
+
+                @Override
+                public void sendRoleApplicationRejected(User user, UserRole role, String reason) {
+                }
             };
         }
 

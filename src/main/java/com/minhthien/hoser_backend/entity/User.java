@@ -1,6 +1,7 @@
 package com.minhthien.hoser_backend.entity;
 
 import com.minhthien.hoser_backend.enums.UserRole;
+import com.minhthien.hoser_backend.enums.RoleApprovalStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -44,6 +45,22 @@ public class User implements UserDetails
     @Column(nullable = false, length = 20)
     private UserRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private UserRole pendingRole;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private RoleApprovalStatus roleApprovalStatus = RoleApprovalStatus.NONE;
+
+    @Column(length = 1000)
+    private String roleReviewReason;
+
+    private Long roleReviewedBy;
+
+    private LocalDateTime roleReviewedAt;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;
@@ -85,6 +102,9 @@ public class User implements UserDetails
         if (active == null) {
             active = true;
         }
+        if (roleApprovalStatus == null) {
+            roleApprovalStatus = RoleApprovalStatus.NONE;
+        }
     }
 
     @PreUpdate
@@ -92,6 +112,9 @@ public class User implements UserDetails
         updatedAt = LocalDateTime.now();
         if (updatedBy == null || updatedBy.isBlank()) {
             updatedBy = "SYSTEM";
+        }
+        if (roleApprovalStatus == null) {
+            roleApprovalStatus = RoleApprovalStatus.NONE;
         }
     }
 
