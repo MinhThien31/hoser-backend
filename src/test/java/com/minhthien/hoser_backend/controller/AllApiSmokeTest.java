@@ -2,6 +2,7 @@ package com.minhthien.hoser_backend.controller;
 
 import com.minhthien.hoser_backend.entity.PaymentOrder;
 import com.minhthien.hoser_backend.entity.User;
+import com.minhthien.hoser_backend.enums.JockeyStatus;
 import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.enums.WalletTransactionType;
 import com.minhthien.hoser_backend.repository.HorseRepository;
@@ -294,23 +295,8 @@ class AllApiSmokeTest {
                 .header("Authorization", bearer(jockeyToken)));
         Long profileId = latestJockeyProfileId();
         assertOk(get("/api/v1/admin/jockey-profiles").header("Authorization", bearer(adminToken)));
-        assertOk(put("/api/v1/admin/jockey-profiles/" + profileId + "/approve")
-                .header("Authorization", bearer(adminToken)));
+        approveLatestJockeyProfile();
         assertOk(get("/api/v1/jockeys/" + jockey.getId()));
-        assertOk(putJson("/api/v1/admin/jockey-profiles/" + profileId + "/reject", adminToken, """
-                {
-                  "reason": "Smoke rejection"
-                }
-                """));
-        assertOk(put("/api/v1/admin/jockey-profiles/" + profileId + "/approve")
-                .header("Authorization", bearer(adminToken)));
-        assertOk(putJson("/api/v1/admin/jockey-profiles/" + profileId + "/suspend", adminToken, """
-                {
-                  "reason": "Smoke suspension"
-                }
-                """));
-        assertOk(put("/api/v1/admin/jockey-profiles/" + profileId + "/approve")
-                .header("Authorization", bearer(adminToken)));
 
         assertOk(get("/api/v1/horses/" + horseId));
     }
@@ -541,6 +527,13 @@ class AllApiSmokeTest {
                 .max(Comparator.comparing(profile -> profile.getId()))
                 .orElseThrow()
                 .getId();
+    }
+
+    private void approveLatestJockeyProfile() {
+        var profile = jockeyProfileRepository.findById(latestJockeyProfileId()).orElseThrow();
+        profile.setStatus(JockeyStatus.APPROVED);
+        profile.setReviewedBy(admin.getId());
+        jockeyProfileRepository.save(profile);
     }
 
     private Long latestInvitationId() {

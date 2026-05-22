@@ -1,6 +1,5 @@
 package com.minhthien.hoser_backend.controller;
 
-import com.minhthien.hoser_backend.dto.request.AdminReviewRequest;
 import com.minhthien.hoser_backend.dto.request.JockeyProfileRequest;
 import com.minhthien.hoser_backend.dto.request.JockeyProfileUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
@@ -63,31 +62,5 @@ public class JockeyProfileController {
     public ResponseEntity<ApiResponse<List<JockeyProfileResponse>>> getAdminJockeyProfiles(
             @RequestParam(required = false, defaultValue = "PENDING") JockeyStatus status) {
         return ResponseEntity.ok(ApiResponse.success(jockeyProfileService.getAdminJockeyProfiles(status)));
-    }
-
-    @PutMapping("/admin/jockey-profiles/{id}/approve")
-    public ResponseEntity<ApiResponse<JockeyProfileResponse>> approveJockeyProfile(
-            @AuthenticationPrincipal User currentUser,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("Jockey profile approved",
-                jockeyProfileService.approveJockeyProfile(id, currentUser.getId())));
-    }
-
-    @PutMapping("/admin/jockey-profiles/{id}/reject")
-    public ResponseEntity<ApiResponse<JockeyProfileResponse>> rejectJockeyProfile(
-            @AuthenticationPrincipal User currentUser,
-            @PathVariable Long id,
-            @Valid @RequestBody AdminReviewRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Jockey profile rejected",
-                jockeyProfileService.rejectJockeyProfile(id, currentUser.getId(), request)));
-    }
-
-    @PutMapping("/admin/jockey-profiles/{id}/suspend")
-    public ResponseEntity<ApiResponse<JockeyProfileResponse>> suspendJockeyProfile(
-            @AuthenticationPrincipal User currentUser,
-            @PathVariable Long id,
-            @Valid @RequestBody AdminReviewRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Jockey profile suspended",
-                jockeyProfileService.suspendJockeyProfile(id, currentUser.getId(), request)));
     }
 }
