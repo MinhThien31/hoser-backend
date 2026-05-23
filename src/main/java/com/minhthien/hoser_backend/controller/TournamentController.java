@@ -1,9 +1,13 @@
 package com.minhthien.hoser_backend.controller;
 
 import com.minhthien.hoser_backend.dto.request.TournamentRequest;
+import com.minhthien.hoser_backend.dto.request.TournamentPrizeRequest;
+import com.minhthien.hoser_backend.dto.request.TournamentRoundRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
+import com.minhthien.hoser_backend.dto.response.TournamentPrizeResponse;
 import com.minhthien.hoser_backend.dto.response.TournamentResponse;
+import com.minhthien.hoser_backend.dto.response.TournamentRoundResponse;
 import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.enums.TournamentStatus;
 import com.minhthien.hoser_backend.service.TournamentService;
@@ -40,6 +44,24 @@ public class TournamentController {
                 tournamentService.updateTournament(currentUser.getId(), id, request)));
     }
 
+    @PutMapping("/admin/tournaments/{id}/rounds")
+    public ResponseEntity<ApiResponse<TournamentResponse>> replaceTournamentRounds(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id,
+            @Valid @RequestBody List<@Valid TournamentRoundRequest> requests) {
+        return ResponseEntity.ok(ApiResponse.success("Tournament rounds updated",
+                tournamentService.replaceTournamentRounds(currentUser.getId(), id, requests)));
+    }
+
+    @PutMapping("/admin/tournaments/{id}/prizes")
+    public ResponseEntity<ApiResponse<TournamentResponse>> replaceTournamentPrizes(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id,
+            @Valid @RequestBody List<@Valid TournamentPrizeRequest> requests) {
+        return ResponseEntity.ok(ApiResponse.success("Tournament prizes updated",
+                tournamentService.replaceTournamentPrizes(currentUser.getId(), id, requests)));
+    }
+
     @PutMapping("/admin/tournaments/{id}/status")
     public ResponseEntity<ApiResponse<TournamentResponse>> updateTournamentStatus(
             @AuthenticationPrincipal User currentUser,
@@ -47,6 +69,22 @@ public class TournamentController {
             @RequestParam TournamentStatus status) {
         return ResponseEntity.ok(ApiResponse.success("Tournament status updated",
                 tournamentService.updateTournamentStatus(currentUser.getId(), id, status)));
+    }
+
+    @PutMapping("/admin/tournaments/{id}/open-registration")
+    public ResponseEntity<ApiResponse<TournamentResponse>> openRegistration(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("Tournament registration opened",
+                tournamentService.openRegistration(currentUser.getId(), id)));
+    }
+
+    @PutMapping("/admin/tournaments/{id}/close-registration")
+    public ResponseEntity<ApiResponse<TournamentResponse>> closeRegistration(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("Tournament registration closed",
+                tournamentService.closeRegistration(currentUser.getId(), id)));
     }
 
     @GetMapping("/admin/tournaments")
@@ -68,5 +106,15 @@ public class TournamentController {
     @GetMapping("/tournaments/{id}")
     public ResponseEntity<ApiResponse<TournamentResponse>> getPublicTournament(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(tournamentService.getPublicTournament(id)));
+    }
+
+    @GetMapping("/tournaments/{id}/rounds")
+    public ResponseEntity<ApiResponse<List<TournamentRoundResponse>>> getPublicTournamentRounds(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(tournamentService.getPublicTournamentRounds(id)));
+    }
+
+    @GetMapping("/tournaments/{id}/prizes")
+    public ResponseEntity<ApiResponse<List<TournamentPrizeResponse>>> getPublicTournamentPrizes(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(tournamentService.getPublicTournamentPrizes(id)));
     }
 }

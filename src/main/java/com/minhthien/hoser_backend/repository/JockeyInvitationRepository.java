@@ -17,8 +17,11 @@ public interface JockeyInvitationRepository extends JpaRepository<JockeyInvitati
     @EntityGraph(attributePaths = {"owner", "jockey", "horse", "jockeyProfile", "jockeyProfile.user"})
     List<JockeyInvitation> findByJockeyIdOrderByCreatedAtDesc(Long jockeyId);
 
-    @EntityGraph(attributePaths = {"owner", "jockey", "horse", "jockeyProfile", "jockeyProfile.user"})
+    @EntityGraph(attributePaths = {"owner", "jockey", "horse", "horse.owner", "jockeyProfile", "jockeyProfile.user"})
     List<JockeyInvitation> findByOwnerIdAndStatusOrderByCreatedAtDesc(Long ownerId, AssignmentStatus status);
+
+    @EntityGraph(attributePaths = {"owner", "jockey", "horse", "horse.owner", "jockeyProfile", "jockeyProfile.user"})
+    List<JockeyInvitation> findByStatusOrderByCreatedAtDesc(AssignmentStatus status);
 
     boolean existsByHorseIdAndJockeyIdAndStatusIn(
             Long horseId,

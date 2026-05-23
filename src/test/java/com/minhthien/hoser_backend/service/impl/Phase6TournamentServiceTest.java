@@ -14,6 +14,7 @@ import com.minhthien.hoser_backend.enums.PrizeRecipientPolicy;
 import com.minhthien.hoser_backend.enums.TournamentStatus;
 import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.exception.BadRequestException;
+import com.minhthien.hoser_backend.exception.ResourceNotFoundException;
 import com.minhthien.hoser_backend.exception.UnauthorizedException;
 import com.minhthien.hoser_backend.repository.AdminAuditLogRepository;
 import com.minhthien.hoser_backend.repository.TournamentRepository;
@@ -111,6 +112,60 @@ class Phase6TournamentServiceTest {
     }
 
     @Test
+    void openRegistrationShortcutUsesReadyValidationAndStatusAudit() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.PUBLISHED);
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+        when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.openRegistration(9L, 10L);
+
+        assertThat(response.getStatus()).isEqualTo(TournamentStatus.OPEN_REGISTRATION);
+        assertThat(tournament.getOpenedRegistrationAt()).isNotNull();
+
+        ArgumentCaptor<AdminAuditLog> auditCaptor = ArgumentCaptor.forClass(AdminAuditLog.class);
+        verify(adminAuditLogRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getAction()).isEqualTo("TOURNAMENT_STATUS_UPDATED");
+    }
+
+    @Test
+    void openRegistrationShortcutRejectsTournamentWithoutPrizeConfig() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.PUBLISHED);
+        tournament.replacePrizes(List.of());
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> service.openRegistration(9L, 10L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Tournament must have at least one prize before publishing");
+    }
+
+    @Test
+    void closeRegistrationShortcutMovesTournamentToRegistrationClosed() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.OPEN_REGISTRATION);
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+        when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.closeRegistration(9L, 10L);
+
+        assertThat(response.getStatus()).isEqualTo(TournamentStatus.REGISTRATION_CLOSED);
+
+        ArgumentCaptor<AdminAuditLog> auditCaptor = ArgumentCaptor.forClass(AdminAuditLog.class);
+        verify(adminAuditLogRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getAction()).isEqualTo("TOURNAMENT_STATUS_UPDATED");
+    }
+
+    @Test
     void updateTournamentKeepsRoundsAndPrizesWhenListsAreNotProvided() {
         TournamentServiceImpl service = service();
         User admin = user(9L, "admin", UserRole.ADMIN);
@@ -171,6 +226,114 @@ class Phase6TournamentServiceTest {
     }
 
     @Test
+    void replaceTournamentRoundsUpdatesRoundsAndAudits() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+        when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.replaceTournamentRounds(9L, 10L,
+                List.of(round("Final Only", 1, 1, 2, 8, 1)));
+
+        assertThat(response.getRounds()).hasSize(1);
+        assertThat(response.getRounds().get(0).getName()).isEqualTo("Final Only");
+
+        ArgumentCaptor<AdminAuditLog> auditCaptor = ArgumentCaptor.forClass(AdminAuditLog.class);
+        verify(adminAuditLogRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getAction()).isEqualTo("TOURNAMENT_ROUNDS_UPDATED");
+    }
+
+    @Test
+    void replaceTournamentRoundsRejectsDuplicateRoundOrder() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> service.replaceTournamentRounds(9L, 10L,
+                List.of(
+                        round("Qualifier A", 1, 1, 1, 4, 1),
+                        round("Qualifier B", 1, 1, 1, 4, 1)
+                )))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Round order must be unique within a tournament");
+    }
+
+    @Test
+    void replaceTournamentRoundsRejectsAdvancementThatCannotFillNextRound() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> service.replaceTournamentRounds(9L, 10L,
+                List.of(
+                        round("Qualifier", 1, 1, 1, 4, 1),
+                        round("Final", 2, 2, 1, 4, 1)
+                )))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Advancement rule cannot fill the next round minimum participants");
+    }
+
+    @Test
+    void replaceTournamentConfigRejectsNonEditableStatus() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.COMPLETED);
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> service.replaceTournamentRounds(9L, 10L,
+                List.of(round("Final Only", 1, 1, 2, 8, 1))))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Only draft or published tournaments can be updated");
+    }
+
+    @Test
+    void replaceTournamentPrizesUpdatesPrizesAndAudits() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+        when(tournamentRepository.save(any(Tournament.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.replaceTournamentPrizes(9L, 10L,
+                List.of(prize(1, "2000000.00"), prize(2, "1000000.00")));
+
+        assertThat(response.getPrizes()).hasSize(2);
+        assertThat(response.getPrizes().get(0).getAmount()).isEqualByComparingTo("2000000.00");
+
+        ArgumentCaptor<AdminAuditLog> auditCaptor = ArgumentCaptor.forClass(AdminAuditLog.class);
+        verify(adminAuditLogRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getAction()).isEqualTo("TOURNAMENT_PRIZES_UPDATED");
+    }
+
+    @Test
+    void replaceTournamentPrizesRejectsPrizeWithoutAmountOrItem() {
+        TournamentServiceImpl service = service();
+        User admin = user(9L, "admin", UserRole.ADMIN);
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+        TournamentPrizeRequest request = prize(1, "0.00");
+
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> service.replaceTournamentPrizes(9L, 10L, List.of(request)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Prize must have a positive amount or item name");
+    }
+
+    @Test
     void nonAdminCannotUpdateTournamentStatus() {
         TournamentServiceImpl service = service();
         User owner = user(1L, "owner", UserRole.OWNER);
@@ -196,6 +359,32 @@ class Phase6TournamentServiceTest {
         verify(tournamentRepository).findByStatusInOrderByStartAtAsc(statuses.capture());
         assertThat(statuses.getValue()).contains(TournamentStatus.PUBLISHED, TournamentStatus.OPEN_REGISTRATION);
         assertThat(statuses.getValue()).doesNotContain(TournamentStatus.DRAFT);
+    }
+
+    @Test
+    void publicTournamentRoundsAndPrizesReturnConfiguredListsForPublicTournament() {
+        TournamentServiceImpl service = service();
+        Tournament tournament = tournament(TournamentStatus.PUBLISHED);
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+
+        var rounds = service.getPublicTournamentRounds(10L);
+        var prizes = service.getPublicTournamentPrizes(10L);
+
+        assertThat(rounds).hasSize(2);
+        assertThat(rounds.get(0).getRoundOrder()).isEqualTo(1);
+        assertThat(prizes).hasSize(1);
+        assertThat(prizes.get(0).getRank()).isEqualTo(1);
+    }
+
+    @Test
+    void publicTournamentRoundsRejectDraftTournamentAsNotFound() {
+        TournamentServiceImpl service = service();
+        Tournament tournament = tournament(TournamentStatus.DRAFT);
+        when(tournamentRepository.findById(10L)).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> service.getPublicTournamentRounds(10L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tournament not found with id: '10'");
     }
 
     private TournamentServiceImpl service() {

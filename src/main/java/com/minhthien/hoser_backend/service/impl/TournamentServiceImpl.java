@@ -65,15 +65,59 @@ public class TournamentServiceImpl implements TournamentService {
         User admin = requireAdmin(adminId);
         requireUpdateRequest(request);
         Tournament tournament = requireTournament(tournamentId);
-        if (tournament.getStatus() != TournamentStatus.DRAFT && tournament.getStatus() != TournamentStatus.PUBLISHED) {
-            throw new BadRequestException("Only draft or published tournaments can be updated");
-        }
+        requireConfigEditable(tournament);
 
         applyUpdateRequest(tournament, request, admin.getUsername());
         validateBaseTournament(tournament);
         Tournament saved = tournamentRepository.save(tournament);
         recordAudit(admin, "TOURNAMENT_UPDATED", saved, "Tournament setup updated");
         return mapToResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public TournamentResponse replaceTournamentRounds(Long adminId, Long tournamentId,
+                                                      List<TournamentRoundRequest> requests) {
+        User admin = requireAdmin(adminId);
+        Tournament tournament = requireTournament(tournamentId);
+        requireConfigEditable(tournament);
+
+        tournament.replaceRounds(mapRounds(requests));
+        tournament.setUpdatedBy(admin.getUsername());
+        validateBaseTournament(tournament);
+        validateConfiguredRounds(tournament);
+        Tournament saved = tournamentRepository.save(tournament);
+        recordAudit(admin, "TOURNAMENT_ROUNDS_UPDATED", saved, "Tournament rounds replaced");
+        return mapToResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public TournamentResponse replaceTournamentPrizes(Long adminId, Long tournamentId,
+                                                      List<TournamentPrizeRequest> requests) {
+        User admin = requireAdmin(adminId);
+        Tournament tournament = requireTournament(tournamentId);
+        requireConfigEditable(tournament);
+
+        tournament.replacePrizes(mapPrizes(requests));
+        tournament.setUpdatedBy(admin.getUsername());
+        validateBaseTournament(tournament);
+        validateConfiguredPrizes(tournament);
+        Tournament saved = tournamentRepository.save(tournament);
+        recordAudit(admin, "TOURNAMENT_PRIZES_UPDATED", saved, "Tournament prizes replaced");
+        return mapToResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public TournamentResponse openRegistration(Long adminId, Long tournamentId) {
+        return updateTournamentStatus(adminId, tournamentId, TournamentStatus.OPEN_REGISTRATION);
+    }
+
+    @Override
+    @Transactional
+    public TournamentResponse closeRegistration(Long adminId, Long tournamentId) {
+        return updateTournamentStatus(adminId, tournamentId, TournamentStatus.REGISTRATION_CLOSED);
     }
 
     @Override
@@ -134,6 +178,26 @@ public class TournamentServiceImpl implements TournamentService {
             throw new ResourceNotFoundException("Tournament", "id", tournamentId);
         }
         return mapToResponse(tournament);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TournamentRoundResponse> getPublicTournamentRounds(Long tournamentId) {
+        Tournament tournament = requirePublicTournament(tournamentId);
+        return tournament.getRounds().stream()
+                .sorted(Comparator.comparing(TournamentRound::getRoundOrder))
+                .map(this::mapRound)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TournamentPrizeResponse> getPublicTournamentPrizes(Long tournamentId) {
+        Tournament tournament = requirePublicTournament(tournamentId);
+        return tournament.getPrizes().stream()
+                .sorted(Comparator.comparing(TournamentPrize::getRank))
+                .map(this::mapPrize)
+                .toList();
     }
 
     private void applyRequest(Tournament tournament, TournamentRequest request, String updatedBy) {
@@ -290,6 +354,18 @@ public class TournamentServiceImpl implements TournamentService {
         validatePrizes(tournament);
     }
 
+    private void validateConfiguredRounds(Tournament tournament) {
+        if (tournament.getRounds() != null && !tournament.getRounds().isEmpty()) {
+            validateRounds(tournament);
+        }
+    }
+
+    private void validateConfiguredPrizes(Tournament tournament) {
+        if (tournament.getPrizes() != null && !tournament.getPrizes().isEmpty()) {
+            validatePrizes(tournament);
+        }
+    }
+
     private void validateTimeWindow(LocalDateTime registrationOpenAt, LocalDateTime registrationCloseAt,
                                     LocalDateTime startAt, LocalDateTime endAt,
                                     LocalDateTime checkInDeadlineAt) {
@@ -408,6 +484,14 @@ public class TournamentServiceImpl implements TournamentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tournament", "id", tournamentId));
     }
 
+    private Tournament requirePublicTournament(Long tournamentId) {
+        Tournament tournament = requireTournament(tournamentId);
+        if (!isPublicStatus(tournament.getStatus())) {
+            throw new ResourceNotFoundException("Tournament", "id", tournamentId);
+        }
+        return tournament;
+    }
+
     private User requireAdmin(Long adminId) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", adminId));
@@ -415,6 +499,12 @@ public class TournamentServiceImpl implements TournamentService {
             throw new UnauthorizedException("Only admins can manage tournaments");
         }
         return admin;
+    }
+
+    private void requireConfigEditable(Tournament tournament) {
+        if (tournament.getStatus() != TournamentStatus.DRAFT && tournament.getStatus() != TournamentStatus.PUBLISHED) {
+            throw new BadRequestException("Only draft or published tournaments can be updated");
+        }
     }
 
     private TournamentResponse mapToResponse(Tournament tournament) {

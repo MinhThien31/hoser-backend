@@ -105,6 +105,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/jockeys/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tournaments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tournaments/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/tournaments/*/rounds").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/tournaments/*/prizes").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/payos/webhook").permitAll()
                         .requestMatchers("/api/v1/wallets/top-up/payos/webhook").permitAll()
