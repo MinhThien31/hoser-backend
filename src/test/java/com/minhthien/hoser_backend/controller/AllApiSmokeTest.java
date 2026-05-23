@@ -114,6 +114,8 @@ class AllApiSmokeTest {
         admin = createUser("smoke-admin", "smoke-admin@example.com", UserRole.ADMIN);
         adminTarget = createUser("smoke-target", "smoke-target@example.com", UserRole.USER);
         deactivationTarget = createUser("smoke-deactivate", "smoke-deactivate@example.com", UserRole.USER);
+        deactivationTarget.setActive(false);
+        userRepository.save(deactivationTarget);
 
         userToken = token(user);
         ownerToken = token(owner);
@@ -219,6 +221,14 @@ class AllApiSmokeTest {
                 """));
 
         assertOk(get("/api/v1/admin/users").header("Authorization", bearer(adminToken)));
+        MvcResult activeUsers = assertOk(get("/api/v1/admin/users/active")
+                .header("Authorization", bearer(adminToken)));
+        assertThat(activeUsers.getResponse().getContentAsString()).doesNotContain("\"active\":false");
+        MvcResult deactivatedUsers = assertOk(get("/api/v1/admin/users/deactivated")
+                .header("Authorization", bearer(adminToken)));
+        assertThat(deactivatedUsers.getResponse().getContentAsString())
+                .contains("\"active\":false")
+                .doesNotContain("\"active\":true");
         assertOk(get("/api/v1/admin/users/" + adminTarget.getId()).header("Authorization", bearer(adminToken)));
         assertOk(put("/api/v1/admin/users/" + adminTarget.getId() + "/deactivate")
                 .header("Authorization", bearer(adminToken)));

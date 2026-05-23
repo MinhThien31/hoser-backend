@@ -25,6 +25,16 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getAllUsers()));
     }
 
+    @GetMapping("/admin/users/active")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getActiveUsers() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getActiveUsers()));
+    }
+
+    @GetMapping("/admin/users/deactivated")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getDeactivatedUsers() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getDeactivatedUsers()));
+    }
+
     @GetMapping("/admin/users/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserById(id)));

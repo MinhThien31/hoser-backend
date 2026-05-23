@@ -8,6 +8,8 @@ import java.util.List;
 public interface AdminService {
     UserResponse getUserById(Long id);
     List<UserResponse> getAllUsers();
+    List<UserResponse> getActiveUsers();
+    List<UserResponse> getDeactivatedUsers();
     void deactivateAccount(Long userId);
     void activateAccount(Long userId);
     UserResponse updateUserStatus(Long userId, boolean active);

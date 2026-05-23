@@ -35,6 +35,20 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public List<UserResponse> getActiveUsers() {
+        return userRepository.findByActive(true).stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public List<UserResponse> getDeactivatedUsers() {
+        return userRepository.findByActive(false).stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public void deactivateAccount(Long userId) {
         User user = userRepository.findById(userId)
