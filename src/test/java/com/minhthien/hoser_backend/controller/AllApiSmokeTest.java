@@ -170,7 +170,13 @@ class AllApiSmokeTest {
                 }
                 """));
         assertOk(get("/api/v1/role-applications/me").header("Authorization", bearer(userToken)));
+        assertOk(get("/api/v1/admin/role-applications")
+                .header("Authorization", bearer(adminToken)));
         assertOk(get("/api/v1/admin/role-applications?role=SPECTATOR&status=PENDING")
+                .header("Authorization", bearer(adminToken)));
+        assertOk(get("/api/v1/admin/role-applications/role/SPECTATOR")
+                .header("Authorization", bearer(adminToken)));
+        assertOk(get("/api/v1/admin/role-applications/status/PENDING")
                 .header("Authorization", bearer(adminToken)));
         assertOk(putJson("/api/v1/auth/password", userToken, """
                 {

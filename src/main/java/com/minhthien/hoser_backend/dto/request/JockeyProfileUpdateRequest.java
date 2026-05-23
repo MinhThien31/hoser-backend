@@ -30,14 +30,14 @@ public class JockeyProfileUpdateRequest {
     @Size(max = 2000, message = "Awards must be at most 2000 characters")
     private String awards;
 
-    @Size(max = 2000, message = "Achievements must be at most 2000 characters")
-    private String achievements;
-
     @Size(max = 1000, message = "Specialties must be at most 1000 characters")
     private String specialties;
 
     @Schema(type = "string", format = "binary", description = "Jockey avatar image file")
     private MultipartFile avatar;
+
+    @Schema(type = "string", format = "binary", description = "Jockey achievements image file")
+    private MultipartFile achievements;
 
     @Schema(type = "string", format = "binary", description = "Jockey license document file")
     private MultipartFile licenseDocument;

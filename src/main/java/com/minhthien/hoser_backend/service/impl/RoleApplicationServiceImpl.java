@@ -42,6 +42,7 @@ import java.util.List;
 public class RoleApplicationServiceImpl implements RoleApplicationService {
     private static final String OWNER_DOCUMENT_FOLDER = "hoser/owners/documents";
     private static final String JOCKEY_AVATAR_FOLDER = "hoser/jockeys/avatars";
+    private static final String JOCKEY_ACHIEVEMENTS_FOLDER = "hoser/jockeys/achievements";
     private static final String JOCKEY_LICENSE_DOCUMENT_FOLDER = "hoser/jockeys/license-documents";
     private static final String REFEREE_DOCUMENT_FOLDER = "hoser/referees/documents";
 
@@ -99,10 +100,13 @@ public class RoleApplicationServiceImpl implements RoleApplicationService {
         profile.setHirePrice(request.getHirePrice());
         profile.setBio(request.getBio());
         profile.setAwards(request.getAwards());
-        profile.setAchievements(request.getAchievements());
         profile.setSpecialties(request.getSpecialties());
         if (avatar != null) {
             profile.setAvatarUrl(cloudinaryUploadService.uploadImage(avatar, JOCKEY_AVATAR_FOLDER));
+        }
+        if (request.getAchievements() != null) {
+            profile.setAchievements(cloudinaryUploadService.uploadImage(
+                    request.getAchievements(), JOCKEY_ACHIEVEMENTS_FOLDER));
         }
         if (licenseDocument != null) {
             profile.setLicenseDocumentUrl(cloudinaryUploadService.uploadDocument(

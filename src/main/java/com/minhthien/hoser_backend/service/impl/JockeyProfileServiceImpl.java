@@ -28,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JockeyProfileServiceImpl implements JockeyProfileService {
     private static final String JOCKEY_AVATAR_FOLDER = "hoser/jockeys/avatars";
+    private static final String JOCKEY_ACHIEVEMENTS_FOLDER = "hoser/jockeys/achievements";
     private static final String JOCKEY_LICENSE_DOCUMENT_FOLDER = "hoser/jockeys/license-documents";
 
     private final JockeyProfileRepository jockeyProfileRepository;
@@ -60,7 +61,7 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
                 .createdBy(jockey.getUsername())
                 .build();
         applyRequest(profile, request);
-        applyUploadedFiles(profile, avatar, licenseDocument);
+        applyUploadedFiles(profile, avatar, request.getAchievements(), licenseDocument);
         resetForReview(profile, jockey);
         return mapToResponse(jockeyProfileRepository.save(profile));
     }
@@ -85,7 +86,7 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
         }
 
         applyUpdateRequest(profile, request);
-        applyUploadedFiles(profile, avatar, licenseDocument);
+        applyUploadedFiles(profile, avatar, request.getAchievements(), licenseDocument);
         resetForReview(profile, jockey);
         return mapToResponse(jockeyProfileRepository.save(profile));
     }
@@ -157,7 +158,6 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
         profile.setHirePrice(request.getHirePrice());
         profile.setBio(request.getBio());
         profile.setAwards(request.getAwards());
-        profile.setAchievements(request.getAchievements());
         profile.setSpecialties(request.getSpecialties());
     }
 
@@ -184,17 +184,18 @@ public class JockeyProfileServiceImpl implements JockeyProfileService {
         if (request.getAwards() != null) {
             profile.setAwards(request.getAwards());
         }
-        if (request.getAchievements() != null) {
-            profile.setAchievements(request.getAchievements());
-        }
         if (request.getSpecialties() != null) {
             profile.setSpecialties(request.getSpecialties());
         }
     }
 
-    private void applyUploadedFiles(JockeyProfile profile, MultipartFile avatar, MultipartFile licenseDocument) {
+    private void applyUploadedFiles(JockeyProfile profile, MultipartFile avatar, MultipartFile achievements,
+                                    MultipartFile licenseDocument) {
         if (avatar != null) {
             profile.setAvatarUrl(cloudinaryUploadService.uploadImage(avatar, JOCKEY_AVATAR_FOLDER));
+        }
+        if (achievements != null) {
+            profile.setAchievements(cloudinaryUploadService.uploadImage(achievements, JOCKEY_ACHIEVEMENTS_FOLDER));
         }
         if (licenseDocument != null) {
             profile.setLicenseDocumentUrl(cloudinaryUploadService.uploadDocument(

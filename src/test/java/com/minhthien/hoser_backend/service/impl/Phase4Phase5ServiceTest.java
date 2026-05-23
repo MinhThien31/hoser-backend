@@ -212,25 +212,31 @@ class Phase4Phase5ServiceTest {
         JockeyProfileServiceImpl jockeyProfileService = jockeyProfileService();
         User jockey = user(2L, "jockey-one", UserRole.JOCKEY);
         MockMultipartFile avatar = new MockMultipartFile("avatar", "avatar.png", "image/png", "img".getBytes());
+        MockMultipartFile achievements = new MockMultipartFile(
+                "achievements", "achievements.png", "image/png", "achievement".getBytes());
         MockMultipartFile licenseDocument = new MockMultipartFile(
                 "licenseDocument", "license.pdf", "application/pdf", "doc".getBytes());
+        JockeyProfileRequest request = jockeyProfileRequest();
+        request.setAchievements(achievements);
 
         when(userRepository.findById(2L)).thenReturn(Optional.of(jockey));
         when(jockeyProfileRepository.existsByLicenseNumberAndUserIdNot("LIC-2", 2L)).thenReturn(false);
         when(jockeyProfileRepository.findByUserId(2L)).thenReturn(Optional.empty());
         when(cloudinaryUploadService.uploadImage(avatar, "hoser/jockeys/avatars"))
                 .thenReturn("https://cdn.example/avatar.png");
+        when(cloudinaryUploadService.uploadImage(achievements, "hoser/jockeys/achievements"))
+                .thenReturn("https://cdn.example/achievements.png");
         when(cloudinaryUploadService.uploadDocument(licenseDocument, "hoser/jockeys/license-documents"))
                 .thenReturn("https://cdn.example/license.pdf");
         when(jockeyProfileRepository.save(any(JockeyProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = jockeyProfileService.createMyProfile(2L, jockeyProfileRequest(), avatar, licenseDocument);
+        var response = jockeyProfileService.createMyProfile(2L, request, avatar, licenseDocument);
 
         assertThat(response.getAvatarUrl()).isEqualTo("https://cdn.example/avatar.png");
         assertThat(response.getLicenseDocumentUrl()).isEqualTo("https://cdn.example/license.pdf");
         assertThat(response.getHirePrice()).isEqualByComparingTo("500.00");
         assertThat(response.getAwards()).isEqualTo("Golden Cup");
-        assertThat(response.getAchievements()).isEqualTo("10 wins");
+        assertThat(response.getAchievements()).isEqualTo("https://cdn.example/achievements.png");
         assertThat(response.getSpecialties()).isEqualTo("Sprint");
         assertThat(response.getStatus()).isEqualTo(JockeyStatus.PENDING);
     }
@@ -275,6 +281,7 @@ class Phase4Phase5ServiceTest {
         User jockey = user(2L, "jockey-one", UserRole.JOCKEY);
         JockeyProfile profile = jockeyProfile(20L, jockey, JockeyStatus.PENDING);
         profile.setAvatarUrl("https://cdn.example/existing-avatar.png");
+        profile.setAchievements("https://cdn.example/existing-achievements.png");
         profile.setLicenseDocumentUrl("https://cdn.example/existing-license.pdf");
 
         when(userRepository.findById(2L)).thenReturn(Optional.of(jockey));
@@ -285,9 +292,32 @@ class Phase4Phase5ServiceTest {
         var response = jockeyProfileService.updateMyProfile(2L, jockeyProfileUpdateRequest(), null, null);
 
         assertThat(response.getAvatarUrl()).isEqualTo("https://cdn.example/existing-avatar.png");
+        assertThat(response.getAchievements()).isEqualTo("https://cdn.example/existing-achievements.png");
         assertThat(response.getLicenseDocumentUrl()).isEqualTo("https://cdn.example/existing-license.pdf");
         verify(cloudinaryUploadService, never()).uploadImage(any(), any());
         verify(cloudinaryUploadService, never()).uploadDocument(any(), any());
+    }
+
+    @Test
+    void updateJockeyProfileStoresUploadedAchievementUrl() {
+        JockeyProfileServiceImpl jockeyProfileService = jockeyProfileService();
+        User jockey = user(2L, "jockey-one", UserRole.JOCKEY);
+        JockeyProfile profile = jockeyProfile(20L, jockey, JockeyStatus.PENDING);
+        MockMultipartFile achievements = new MockMultipartFile(
+                "achievements", "achievements.png", "image/png", "achievement".getBytes());
+        JockeyProfileUpdateRequest request = jockeyProfileUpdateRequest();
+        request.setAchievements(achievements);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(jockey));
+        when(jockeyProfileRepository.existsByLicenseNumberAndUserIdNot("LIC-2", 2L)).thenReturn(false);
+        when(jockeyProfileRepository.findByUserId(2L)).thenReturn(Optional.of(profile));
+        when(cloudinaryUploadService.uploadImage(achievements, "hoser/jockeys/achievements"))
+                .thenReturn("https://cdn.example/updated-achievements.png");
+        when(jockeyProfileRepository.save(any(JockeyProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = jockeyProfileService.updateMyProfile(2L, request, null, null);
+
+        assertThat(response.getAchievements()).isEqualTo("https://cdn.example/updated-achievements.png");
     }
 
     @Test
@@ -587,7 +617,6 @@ class Phase4Phase5ServiceTest {
         request.setLicenseNumber("LIC-2");
         request.setHirePrice(new BigDecimal("500.00"));
         request.setAwards("Golden Cup");
-        request.setAchievements("10 wins");
         request.setSpecialties("Sprint");
         return request;
     }
@@ -597,7 +626,6 @@ class Phase4Phase5ServiceTest {
         request.setLicenseNumber("LIC-2");
         request.setHirePrice(new BigDecimal("500.00"));
         request.setAwards("Golden Cup");
-        request.setAchievements("10 wins");
         request.setSpecialties("Sprint");
         return request;
     }

@@ -36,6 +36,18 @@ public class AdminRoleApplicationController {
         return ResponseEntity.ok(ApiResponse.success(roleApplicationService.getAdminApplications(role, status)));
     }
 
+    @GetMapping("/role/{role}")
+    public ResponseEntity<ApiResponse<List<RoleApplicationResponse>>> getRoleApplicationsByRole(
+            @PathVariable UserRole role) {
+        return ResponseEntity.ok(ApiResponse.success(roleApplicationService.getAdminApplications(role, null)));
+    }
+
+    @GetMapping("/status/{status}")
+    public ResponseEntity<ApiResponse<List<RoleApplicationResponse>>> getRoleApplicationsByStatus(
+            @PathVariable RoleApprovalStatus status) {
+        return ResponseEntity.ok(ApiResponse.success(roleApplicationService.getAdminApplications(null, status)));
+    }
+
     @PutMapping("/{profileId}/approve")
     public ResponseEntity<ApiResponse<RoleApplicationResponse>> approveRoleApplication(
             @AuthenticationPrincipal User currentUser,
