@@ -1,18 +1,21 @@
 package com.minhthien.hoser_backend.service.impl;
 
-import com.minhthien.hoser_backend.dto.request.TournamentPrizeRequest;
+import com.minhthien.hoser_backend.dto.request.JockeyChallengePrizeRequest;
+import com.minhthien.hoser_backend.dto.request.RacePrizeRequest;
+import com.minhthien.hoser_backend.dto.request.RaceRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentRequest;
-import com.minhthien.hoser_backend.dto.request.TournamentRoundRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentUpdateRequest;
-import com.minhthien.hoser_backend.dto.response.TournamentPrizeResponse;
+import com.minhthien.hoser_backend.dto.response.JockeyChallengePrizeResponse;
+import com.minhthien.hoser_backend.dto.response.RacePrizeResponse;
+import com.minhthien.hoser_backend.dto.response.RaceResponse;
 import com.minhthien.hoser_backend.dto.response.TournamentResponse;
-import com.minhthien.hoser_backend.dto.response.TournamentRoundResponse;
 import com.minhthien.hoser_backend.entity.AdminAuditLog;
+import com.minhthien.hoser_backend.entity.JockeyChallengePrize;
+import com.minhthien.hoser_backend.entity.Race;
+import com.minhthien.hoser_backend.entity.RacePrize;
 import com.minhthien.hoser_backend.entity.Tournament;
-import com.minhthien.hoser_backend.entity.TournamentPrize;
-import com.minhthien.hoser_backend.entity.TournamentRound;
 import com.minhthien.hoser_backend.entity.User;
-import com.minhthien.hoser_backend.enums.PrizeRecipientPolicy;
+import com.minhthien.hoser_backend.enums.RaceStatus;
 import com.minhthien.hoser_backend.enums.TournamentStatus;
 import com.minhthien.hoser_backend.enums.UserRole;
 import com.minhthien.hoser_backend.exception.BadRequestException;
@@ -55,7 +58,7 @@ public class TournamentServiceImpl implements TournamentService {
                 .build();
         applyRequest(tournament, request, admin.getUsername());
         Tournament saved = tournamentRepository.save(tournament);
-        recordAudit(admin, "TOURNAMENT_CREATED", saved, "Tournament draft created");
+        recordAudit(admin, "TOURNAMENT_CREATED", saved, "Race day draft created");
         return mapToResponse(saved);
     }
 
@@ -63,48 +66,55 @@ public class TournamentServiceImpl implements TournamentService {
     @Transactional
     public TournamentResponse updateTournament(Long adminId, Long tournamentId, TournamentUpdateRequest request) {
         User admin = requireAdmin(adminId);
-        requireUpdateRequest(request);
+        if (request == null) {
+            throw new BadRequestException("Tournament request is required");
+        }
         Tournament tournament = requireTournament(tournamentId);
         requireConfigEditable(tournament);
 
         applyUpdateRequest(tournament, request, admin.getUsername());
         validateBaseTournament(tournament);
+        validateConfiguredRaces(tournament);
+        validateConfiguredChallenge(tournament);
         Tournament saved = tournamentRepository.save(tournament);
-        recordAudit(admin, "TOURNAMENT_UPDATED", saved, "Tournament setup updated");
+        recordAudit(admin, "TOURNAMENT_UPDATED", saved, "Race day setup updated");
         return mapToResponse(saved);
     }
 
     @Override
     @Transactional
-    public TournamentResponse replaceTournamentRounds(Long adminId, Long tournamentId,
-                                                      List<TournamentRoundRequest> requests) {
+    public TournamentResponse addTournamentRace(Long adminId, Long tournamentId, RaceRequest request) {
         User admin = requireAdmin(adminId);
+        if (request == null) {
+            throw new BadRequestException("Race request is required");
+        }
         Tournament tournament = requireTournament(tournamentId);
         requireConfigEditable(tournament);
 
-        tournament.replaceRounds(mapRounds(requests));
+        Race race = mapRace(request);
+        race.setTournament(tournament);
+        tournament.getRaces().add(race);
         tournament.setUpdatedBy(admin.getUsername());
         validateBaseTournament(tournament);
-        validateConfiguredRounds(tournament);
+        validateConfiguredRaces(tournament);
         Tournament saved = tournamentRepository.save(tournament);
-        recordAudit(admin, "TOURNAMENT_ROUNDS_UPDATED", saved, "Tournament rounds replaced");
+        recordAudit(admin, "TOURNAMENT_RACE_CREATED", saved, "Race created for race day");
         return mapToResponse(saved);
     }
 
     @Override
     @Transactional
-    public TournamentResponse replaceTournamentPrizes(Long adminId, Long tournamentId,
-                                                      List<TournamentPrizeRequest> requests) {
+    public TournamentResponse replaceTournamentRaces(Long adminId, Long tournamentId, List<RaceRequest> requests) {
         User admin = requireAdmin(adminId);
         Tournament tournament = requireTournament(tournamentId);
         requireConfigEditable(tournament);
 
-        tournament.replacePrizes(mapPrizes(requests));
+        tournament.replaceRaces(mapRaces(requests));
         tournament.setUpdatedBy(admin.getUsername());
         validateBaseTournament(tournament);
-        validateConfiguredPrizes(tournament);
+        validateConfiguredRaces(tournament);
         Tournament saved = tournamentRepository.save(tournament);
-        recordAudit(admin, "TOURNAMENT_PRIZES_UPDATED", saved, "Tournament prizes replaced");
+        recordAudit(admin, "TOURNAMENT_RACES_UPDATED", saved, "Race day races replaced");
         return mapToResponse(saved);
     }
 
@@ -182,21 +192,11 @@ public class TournamentServiceImpl implements TournamentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TournamentRoundResponse> getPublicTournamentRounds(Long tournamentId) {
+    public List<RaceResponse> getPublicTournamentRaces(Long tournamentId) {
         Tournament tournament = requirePublicTournament(tournamentId);
-        return tournament.getRounds().stream()
-                .sorted(Comparator.comparing(TournamentRound::getRoundOrder))
-                .map(this::mapRound)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<TournamentPrizeResponse> getPublicTournamentPrizes(Long tournamentId) {
-        Tournament tournament = requirePublicTournament(tournamentId);
-        return tournament.getPrizes().stream()
-                .sorted(Comparator.comparing(TournamentPrize::getRank))
-                .map(this::mapPrize)
+        return tournament.getRaces().stream()
+                .sorted(Comparator.comparing(Race::getScheduledStartAt))
+                .map(this::mapRace)
                 .toList();
     }
 
@@ -209,13 +209,17 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setStartAt(request.getStartAt());
         tournament.setEndAt(request.getEndAt());
         tournament.setCheckInDeadlineAt(request.getCheckInDeadlineAt());
-        tournament.setEntryFee(defaultZero(request.getEntryFee()));
-        tournament.setDepositAmount(defaultZero(request.getDepositAmount()));
+        tournament.setEntryFee(BigDecimal.ZERO);
+        tournament.setDepositAmount(BigDecimal.ZERO);
         tournament.setMinTeams(request.getMinTeams());
         tournament.setMaxTeams(request.getMaxTeams());
+        tournament.setJockeyChallengeEnabled(Boolean.TRUE.equals(request.getJockeyChallengeEnabled()));
+        tournament.setJockeyChallengeFirstPoints(defaultPositive(request.getJockeyChallengeFirstPoints(), 3));
+        tournament.setJockeyChallengeSecondPoints(defaultPositive(request.getJockeyChallengeSecondPoints(), 2));
+        tournament.setJockeyChallengeThirdPoints(defaultPositive(request.getJockeyChallengeThirdPoints(), 1));
         tournament.setUpdatedBy(updatedBy);
-        tournament.replaceRounds(mapRounds(request.getRounds()));
-        tournament.replacePrizes(mapPrizes(request.getPrizes()));
+        tournament.replaceRaces(List.of());
+        tournament.replaceJockeyChallengePrizes(mapChallengePrizes(request.getJockeyChallengePrizes()));
     }
 
     private void applyUpdateRequest(Tournament tournament, TournamentUpdateRequest request, String updatedBy) {
@@ -243,57 +247,87 @@ public class TournamentServiceImpl implements TournamentService {
         if (request.getCheckInDeadlineAt() != null) {
             tournament.setCheckInDeadlineAt(request.getCheckInDeadlineAt());
         }
-        if (request.getEntryFee() != null) {
-            tournament.setEntryFee(request.getEntryFee());
-        }
-        if (request.getDepositAmount() != null) {
-            tournament.setDepositAmount(request.getDepositAmount());
-        }
         if (request.getMinTeams() != null) {
             tournament.setMinTeams(request.getMinTeams());
         }
         if (request.getMaxTeams() != null) {
             tournament.setMaxTeams(request.getMaxTeams());
         }
+        if (request.getJockeyChallengeEnabled() != null) {
+            tournament.setJockeyChallengeEnabled(request.getJockeyChallengeEnabled());
+        }
+        if (request.getJockeyChallengeFirstPoints() != null) {
+            tournament.setJockeyChallengeFirstPoints(request.getJockeyChallengeFirstPoints());
+        }
+        if (request.getJockeyChallengeSecondPoints() != null) {
+            tournament.setJockeyChallengeSecondPoints(request.getJockeyChallengeSecondPoints());
+        }
+        if (request.getJockeyChallengeThirdPoints() != null) {
+            tournament.setJockeyChallengeThirdPoints(request.getJockeyChallengeThirdPoints());
+        }
+        if (request.getJockeyChallengePrizes() != null) {
+            replaceJockeyChallengePrizesForUpdate(tournament,
+                    mapChallengePrizes(request.getJockeyChallengePrizes()));
+        }
         tournament.setUpdatedBy(updatedBy);
-        if (request.getRounds() != null) {
-            tournament.replaceRounds(mapRounds(request.getRounds()));
-        }
-        if (request.getPrizes() != null) {
-            tournament.replacePrizes(mapPrizes(request.getPrizes()));
-        }
     }
 
-    private List<TournamentRound> mapRounds(List<TournamentRoundRequest> requests) {
+    private void replaceJockeyChallengePrizesForUpdate(Tournament tournament,
+                                                       List<JockeyChallengePrize> newPrizes) {
+        tournament.getJockeyChallengePrizes().clear();
+        tournamentRepository.flush();
+        tournament.replaceJockeyChallengePrizes(newPrizes);
+    }
+
+    private List<Race> mapRaces(List<RaceRequest> requests) {
         if (requests == null) {
             return List.of();
         }
         return requests.stream()
-                .map(request -> TournamentRound.builder()
-                        .name(request.getName())
-                        .roundOrder(request.getRoundOrder())
-                        .raceCount(request.getRaceCount())
-                        .minParticipantsPerRace(request.getMinParticipantsPerRace())
-                        .maxParticipantsPerRace(request.getMaxParticipantsPerRace())
-                        .advancementRuleType(request.getAdvancementRuleType())
-                        .advancementCount(request.getAdvancementCount())
+                .map(this::mapRace)
+                .toList();
+    }
+
+    private Race mapRace(RaceRequest request) {
+        Race race = Race.builder()
+                .name(request.getName())
+                .distance(request.getDistance())
+                .scheduledStartAt(request.getScheduledStartAt())
+                .scheduledEndAt(request.getScheduledEndAt())
+                .minParticipants(request.getMinParticipants())
+                .maxParticipants(request.getMaxParticipants())
+                .entryFee(defaultZero(request.getEntryFee()))
+                .depositAmount(defaultZero(request.getDepositAmount()))
+                .referee(request.getRefereeId() == null ? null : requireReferee(request.getRefereeId()))
+                .status(RaceStatus.SCHEDULED)
+                .note(request.getNote())
+                .build();
+        race.replacePrizes(mapRacePrizes(request.getPrizes()));
+        return race;
+    }
+
+    private List<RacePrize> mapRacePrizes(List<RacePrizeRequest> requests) {
+        if (requests == null) {
+            return List.of();
+        }
+        return requests.stream()
+                .map(request -> RacePrize.builder()
+                        .rank(request.getRank())
+                        .amount(defaultZero(request.getAmount()))
+                        .itemName(request.getItemName())
                         .note(request.getNote())
                         .build())
                 .toList();
     }
 
-    private List<TournamentPrize> mapPrizes(List<TournamentPrizeRequest> requests) {
+    private List<JockeyChallengePrize> mapChallengePrizes(List<JockeyChallengePrizeRequest> requests) {
         if (requests == null) {
             return List.of();
         }
         return requests.stream()
-                .map(request -> TournamentPrize.builder()
+                .map(request -> JockeyChallengePrize.builder()
                         .rank(request.getRank())
                         .amount(defaultZero(request.getAmount()))
-                        .itemName(request.getItemName())
-                        .recipientPolicy(request.getRecipientPolicy() == null
-                                ? PrizeRecipientPolicy.OWNER
-                                : request.getRecipientPolicy())
                         .note(request.getNote())
                         .build())
                 .toList();
@@ -312,14 +346,6 @@ public class TournamentServiceImpl implements TournamentService {
         validateTimeWindow(request.getRegistrationOpenAt(), request.getRegistrationCloseAt(),
                 request.getStartAt(), request.getEndAt(), request.getCheckInDeadlineAt());
         validateTeamLimits(request.getMinTeams(), request.getMaxTeams());
-        requireNonNegative(defaultZero(request.getEntryFee()), "Entry fee must not be negative");
-        requireNonNegative(defaultZero(request.getDepositAmount()), "Deposit amount must not be negative");
-    }
-
-    private void requireUpdateRequest(TournamentUpdateRequest request) {
-        if (request == null) {
-            throw new BadRequestException("Tournament request is required");
-        }
     }
 
     private void validateBaseTournament(Tournament tournament) {
@@ -332,37 +358,100 @@ public class TournamentServiceImpl implements TournamentService {
         validateTimeWindow(tournament.getRegistrationOpenAt(), tournament.getRegistrationCloseAt(),
                 tournament.getStartAt(), tournament.getEndAt(), tournament.getCheckInDeadlineAt());
         validateTeamLimits(tournament.getMinTeams(), tournament.getMaxTeams());
-        requireNonNegative(defaultZero(tournament.getEntryFee()), "Entry fee must not be negative");
-        requireNonNegative(defaultZero(tournament.getDepositAmount()), "Deposit amount must not be negative");
+        tournament.setEntryFee(BigDecimal.ZERO);
+        tournament.setDepositAmount(BigDecimal.ZERO);
     }
 
     private void validateReadyForPublish(Tournament tournament) {
-        validateTimeWindow(tournament.getRegistrationOpenAt(), tournament.getRegistrationCloseAt(),
-                tournament.getStartAt(), tournament.getEndAt(), tournament.getCheckInDeadlineAt());
-        validateTeamLimits(tournament.getMinTeams(), tournament.getMaxTeams());
-        requireNonNegative(defaultZero(tournament.getEntryFee()), "Entry fee must not be negative");
-        requireNonNegative(defaultZero(tournament.getDepositAmount()), "Deposit amount must not be negative");
-
-        if (tournament.getRounds() == null || tournament.getRounds().isEmpty()) {
-            throw new BadRequestException("Tournament must have at least one round before publishing");
+        validateBaseTournament(tournament);
+        if (tournament.getRaces() == null || tournament.getRaces().isEmpty()) {
+            throw new BadRequestException("Tournament must have at least one race before publishing");
         }
-        if (tournament.getPrizes() == null || tournament.getPrizes().isEmpty()) {
-            throw new BadRequestException("Tournament must have at least one prize before publishing");
-        }
-
-        validateRounds(tournament);
-        validatePrizes(tournament);
+        validateConfiguredRaces(tournament);
+        validateConfiguredChallenge(tournament);
     }
 
-    private void validateConfiguredRounds(Tournament tournament) {
-        if (tournament.getRounds() != null && !tournament.getRounds().isEmpty()) {
-            validateRounds(tournament);
+    private void validateConfiguredRaces(Tournament tournament) {
+        if (tournament.getRaces() == null || tournament.getRaces().isEmpty()) {
+            return;
+        }
+        Set<String> raceKeys = new HashSet<>();
+        for (Race race : tournament.getRaces()) {
+            validateRace(tournament, race);
+            String key = race.getName().trim().toLowerCase() + "|" + race.getScheduledStartAt();
+            if (!raceKeys.add(key)) {
+                throw new BadRequestException("Race name and start time must be unique within a tournament");
+            }
+            validateRacePrizes(race);
         }
     }
 
-    private void validateConfiguredPrizes(Tournament tournament) {
-        if (tournament.getPrizes() != null && !tournament.getPrizes().isEmpty()) {
-            validatePrizes(tournament);
+    private void validateRace(Tournament tournament, Race race) {
+        if (!hasText(race.getName())) {
+            throw new BadRequestException("Race name is required");
+        }
+        if (!hasText(race.getDistance())) {
+            throw new BadRequestException("Race distance is required");
+        }
+        if (race.getScheduledStartAt() == null || race.getScheduledEndAt() == null) {
+            throw new BadRequestException("Race schedule is required");
+        }
+        if (!race.getScheduledStartAt().isBefore(race.getScheduledEndAt())) {
+            throw new BadRequestException("Race start time must be before end time");
+        }
+        if (race.getScheduledStartAt().isBefore(tournament.getStartAt())
+                || race.getScheduledEndAt().isAfter(tournament.getEndAt())) {
+            throw new BadRequestException("Race schedule must be within tournament time window");
+        }
+        if (race.getMinParticipants() == null || race.getMinParticipants() <= 0
+                || race.getMaxParticipants() == null || race.getMaxParticipants() <= 0) {
+            throw new BadRequestException("Race participant limits must be greater than zero");
+        }
+        if (race.getMinParticipants() > race.getMaxParticipants()) {
+            throw new BadRequestException("Race minimum participants must not exceed maximum participants");
+        }
+        requireNonNegative(defaultZero(race.getEntryFee()), "Race entry fee must not be negative");
+        requireNonNegative(defaultZero(race.getDepositAmount()), "Race deposit amount must not be negative");
+    }
+
+    private void validateRacePrizes(Race race) {
+        if (race.getPrizes() == null || race.getPrizes().isEmpty()) {
+            throw new BadRequestException("Race must have at least one prize");
+        }
+        Set<Integer> ranks = new HashSet<>();
+        for (RacePrize prize : race.getPrizes()) {
+            if (prize.getRank() == null || prize.getRank() <= 0) {
+                throw new BadRequestException("Race prize rank must be greater than zero");
+            }
+            if (!ranks.add(prize.getRank())) {
+                throw new BadRequestException("Race prize rank must be unique within a race");
+            }
+            BigDecimal amount = defaultZero(prize.getAmount());
+            requireNonNegative(amount, "Race prize amount must not be negative");
+            if (amount.compareTo(BigDecimal.ZERO) == 0 && !hasText(prize.getItemName())) {
+                throw new BadRequestException("Race prize must have a positive amount or item name");
+            }
+        }
+    }
+
+    private void validateConfiguredChallenge(Tournament tournament) {
+        if (!Boolean.TRUE.equals(tournament.getJockeyChallengeEnabled())) {
+            return;
+        }
+        if (tournament.getJockeyChallengeFirstPoints() == null || tournament.getJockeyChallengeFirstPoints() <= 0
+                || tournament.getJockeyChallengeSecondPoints() == null || tournament.getJockeyChallengeSecondPoints() <= 0
+                || tournament.getJockeyChallengeThirdPoints() == null || tournament.getJockeyChallengeThirdPoints() <= 0) {
+            throw new BadRequestException("Jockey challenge points must be greater than zero");
+        }
+        Set<Integer> ranks = new HashSet<>();
+        for (JockeyChallengePrize prize : tournament.getJockeyChallengePrizes()) {
+            if (prize.getRank() == null || prize.getRank() <= 0) {
+                throw new BadRequestException("Jockey challenge prize rank must be greater than zero");
+            }
+            if (!ranks.add(prize.getRank())) {
+                throw new BadRequestException("Jockey challenge prize rank must be unique");
+            }
+            requireNonNegative(defaultZero(prize.getAmount()), "Jockey challenge prize amount must not be negative");
         }
     }
 
@@ -401,73 +490,6 @@ public class TournamentServiceImpl implements TournamentService {
         }
     }
 
-    private void validateRounds(Tournament tournament) {
-        Set<Integer> orders = new HashSet<>();
-        List<TournamentRound> rounds = tournament.getRounds().stream()
-                .sorted(Comparator.comparing(TournamentRound::getRoundOrder))
-                .toList();
-        for (TournamentRound round : rounds) {
-            if (!hasText(round.getName())) {
-                throw new BadRequestException("Round name is required");
-            }
-            if (round.getRoundOrder() == null || round.getRoundOrder() <= 0) {
-                throw new BadRequestException("Round order must be greater than zero");
-            }
-            if (!orders.add(round.getRoundOrder())) {
-                throw new BadRequestException("Round order must be unique within a tournament");
-            }
-            if (round.getRaceCount() == null || round.getRaceCount() <= 0) {
-                throw new BadRequestException("Race count must be greater than zero");
-            }
-            if (round.getMinParticipantsPerRace() == null || round.getMinParticipantsPerRace() <= 0
-                    || round.getMaxParticipantsPerRace() == null || round.getMaxParticipantsPerRace() <= 0) {
-                throw new BadRequestException("Participants per race must be greater than zero");
-            }
-            if (round.getMinParticipantsPerRace() > round.getMaxParticipantsPerRace()) {
-                throw new BadRequestException("Minimum participants per race must not exceed maximum participants per race");
-            }
-            if (round.getAdvancementCount() == null || round.getAdvancementCount() <= 0) {
-                throw new BadRequestException("Advancement count must be greater than zero");
-            }
-            if (round.getAdvancementCount() > round.getMaxParticipantsPerRace()) {
-                throw new BadRequestException("Advancement count must not exceed maximum participants per race");
-            }
-        }
-
-        TournamentRound firstRound = rounds.get(0);
-        int firstRoundCapacity = firstRound.getRaceCount() * firstRound.getMaxParticipantsPerRace();
-        if (firstRoundCapacity < tournament.getMinTeams()) {
-            throw new BadRequestException("First round capacity must be at least tournament minimum teams");
-        }
-
-        for (int index = 0; index < rounds.size() - 1; index++) {
-            TournamentRound current = rounds.get(index);
-            TournamentRound next = rounds.get(index + 1);
-            int advancementCapacity = current.getRaceCount() * current.getAdvancementCount();
-            int nextMinimumNeed = next.getRaceCount() * next.getMinParticipantsPerRace();
-            if (advancementCapacity < nextMinimumNeed) {
-                throw new BadRequestException("Advancement rule cannot fill the next round minimum participants");
-            }
-        }
-    }
-
-    private void validatePrizes(Tournament tournament) {
-        Set<Integer> ranks = new HashSet<>();
-        for (TournamentPrize prize : tournament.getPrizes()) {
-            if (prize.getRank() == null || prize.getRank() <= 0) {
-                throw new BadRequestException("Prize rank must be greater than zero");
-            }
-            if (!ranks.add(prize.getRank())) {
-                throw new BadRequestException("Prize rank must be unique within a tournament");
-            }
-            BigDecimal amount = defaultZero(prize.getAmount());
-            requireNonNegative(amount, "Prize amount must not be negative");
-            if (amount.compareTo(BigDecimal.ZERO) == 0 && !hasText(prize.getItemName())) {
-                throw new BadRequestException("Prize must have a positive amount or item name");
-            }
-        }
-    }
-
     private void recordAudit(User admin, String action, Tournament tournament, String reason) {
         adminAuditLogRepository.save(AdminAuditLog.builder()
                 .adminId(admin.getId())
@@ -501,13 +523,22 @@ public class TournamentServiceImpl implements TournamentService {
         return admin;
     }
 
+    private User requireReferee(Long refereeId) {
+        User referee = userRepository.findById(refereeId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", refereeId));
+        if (referee.getRole() != UserRole.REFEREE) {
+            throw new BadRequestException("Race referee must have REFEREE role");
+        }
+        return referee;
+    }
+
     private void requireConfigEditable(Tournament tournament) {
         if (tournament.getStatus() != TournamentStatus.DRAFT && tournament.getStatus() != TournamentStatus.PUBLISHED) {
             throw new BadRequestException("Only draft or published tournaments can be updated");
         }
     }
 
-    private TournamentResponse mapToResponse(Tournament tournament) {
+    public TournamentResponse mapToResponse(Tournament tournament) {
         return TournamentResponse.builder()
                 .id(tournament.getId())
                 .name(tournament.getName())
@@ -518,20 +549,24 @@ public class TournamentServiceImpl implements TournamentService {
                 .startAt(tournament.getStartAt())
                 .endAt(tournament.getEndAt())
                 .checkInDeadlineAt(tournament.getCheckInDeadlineAt())
-                .entryFee(tournament.getEntryFee())
-                .depositAmount(tournament.getDepositAmount())
                 .minTeams(tournament.getMinTeams())
                 .maxTeams(tournament.getMaxTeams())
                 .status(tournament.getStatus())
                 .publishedAt(tournament.getPublishedAt())
                 .openedRegistrationAt(tournament.getOpenedRegistrationAt())
-                .rounds(tournament.getRounds().stream()
-                        .sorted(Comparator.comparing(TournamentRound::getRoundOrder))
-                        .map(this::mapRound)
+                .jockeyChallengeEnabled(tournament.getJockeyChallengeEnabled())
+                .jockeyChallengeFirstPoints(tournament.getJockeyChallengeFirstPoints())
+                .jockeyChallengeSecondPoints(tournament.getJockeyChallengeSecondPoints())
+                .jockeyChallengeThirdPoints(tournament.getJockeyChallengeThirdPoints())
+                .jockeyChallengeFinalizedAt(tournament.getJockeyChallengeFinalizedAt())
+                .jockeyChallengeFinalizedBy(tournament.getJockeyChallengeFinalizedBy())
+                .races(tournament.getRaces().stream()
+                        .sorted(Comparator.comparing(Race::getScheduledStartAt))
+                        .map(this::mapRace)
                         .toList())
-                .prizes(tournament.getPrizes().stream()
-                        .sorted(Comparator.comparing(TournamentPrize::getRank))
-                        .map(this::mapPrize)
+                .jockeyChallengePrizes(tournament.getJockeyChallengePrizes().stream()
+                        .sorted(Comparator.comparing(JockeyChallengePrize::getRank))
+                        .map(this::mapChallengePrize)
                         .toList())
                 .createdAt(tournament.getCreatedAt())
                 .updatedAt(tournament.getUpdatedAt())
@@ -540,38 +575,62 @@ public class TournamentServiceImpl implements TournamentService {
                 .build();
     }
 
-    private TournamentRoundResponse mapRound(TournamentRound round) {
-        return TournamentRoundResponse.builder()
-                .id(round.getId())
-                .name(round.getName())
-                .roundOrder(round.getRoundOrder())
-                .raceCount(round.getRaceCount())
-                .minParticipantsPerRace(round.getMinParticipantsPerRace())
-                .maxParticipantsPerRace(round.getMaxParticipantsPerRace())
-                .advancementRuleType(round.getAdvancementRuleType())
-                .advancementCount(round.getAdvancementCount())
-                .status(round.getStatus())
-                .note(round.getNote())
-                .createdAt(round.getCreatedAt())
-                .updatedAt(round.getUpdatedAt())
+    public RaceResponse mapRace(Race race) {
+        User referee = race.getReferee();
+        return RaceResponse.builder()
+                .id(race.getId())
+                .tournamentId(race.getTournament() == null ? null : race.getTournament().getId())
+                .name(race.getName())
+                .distance(race.getDistance())
+                .scheduledStartAt(race.getScheduledStartAt())
+                .scheduledEndAt(race.getScheduledEndAt())
+                .minParticipants(race.getMinParticipants())
+                .maxParticipants(race.getMaxParticipants())
+                .entryFee(race.getEntryFee())
+                .depositAmount(race.getDepositAmount())
+                .refereeId(referee == null ? null : referee.getId())
+                .refereeUsername(referee == null ? null : referee.getUsername())
+                .status(race.getStatus())
+                .note(race.getNote())
+                .resultFinalizedAt(race.getResultFinalizedAt())
+                .resultFinalizedBy(race.getResultFinalizedBy())
+                .prizes(race.getPrizes().stream()
+                        .sorted(Comparator.comparing(RacePrize::getRank))
+                        .map(this::mapRacePrize)
+                        .toList())
+                .participantCount(race.getParticipants() == null ? 0 : race.getParticipants().size())
+                .createdAt(race.getCreatedAt())
+                .updatedAt(race.getUpdatedAt())
                 .build();
     }
 
-    private TournamentPrizeResponse mapPrize(TournamentPrize prize) {
-        return TournamentPrizeResponse.builder()
+    private RacePrizeResponse mapRacePrize(RacePrize prize) {
+        return RacePrizeResponse.builder()
                 .id(prize.getId())
                 .rank(prize.getRank())
                 .amount(prize.getAmount())
                 .itemName(prize.getItemName())
-                .recipientPolicy(prize.getRecipientPolicy())
                 .note(prize.getNote())
                 .createdAt(prize.getCreatedAt())
-                .updatedAt(prize.getUpdatedAt())
+                .build();
+    }
+
+    private JockeyChallengePrizeResponse mapChallengePrize(JockeyChallengePrize prize) {
+        return JockeyChallengePrizeResponse.builder()
+                .id(prize.getId())
+                .rank(prize.getRank())
+                .amount(prize.getAmount())
+                .note(prize.getNote())
+                .createdAt(prize.getCreatedAt())
                 .build();
     }
 
     private BigDecimal defaultZero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private int defaultPositive(Integer value, int fallback) {
+        return value == null || value <= 0 ? fallback : value;
     }
 
     private void requireNonNegative(BigDecimal value, String message) {

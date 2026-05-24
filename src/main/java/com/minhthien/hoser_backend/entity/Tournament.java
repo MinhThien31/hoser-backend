@@ -76,15 +76,35 @@ public class Tournament {
 
     private LocalDateTime openedRegistrationAt;
 
-    @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("roundOrder ASC")
+    @Column(nullable = false)
     @Builder.Default
-    private List<TournamentRound> rounds = new ArrayList<>();
+    private Boolean jockeyChallengeEnabled = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer jockeyChallengeFirstPoints = 3;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer jockeyChallengeSecondPoints = 2;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer jockeyChallengeThirdPoints = 1;
+
+    private LocalDateTime jockeyChallengeFinalizedAt;
+
+    private Long jockeyChallengeFinalizedBy;
+
+    @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("scheduledStartAt ASC")
+    @Builder.Default
+    private List<Race> races = new ArrayList<>();
 
     @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("rank ASC")
     @Builder.Default
-    private List<TournamentPrize> prizes = new ArrayList<>();
+    private List<JockeyChallengePrize> jockeyChallengePrizes = new ArrayList<>();
 
     @Column(nullable = false)
     @Builder.Default
@@ -118,6 +138,18 @@ public class Tournament {
         if (depositAmount == null) {
             depositAmount = BigDecimal.ZERO;
         }
+        if (jockeyChallengeEnabled == null) {
+            jockeyChallengeEnabled = false;
+        }
+        if (jockeyChallengeFirstPoints == null) {
+            jockeyChallengeFirstPoints = 3;
+        }
+        if (jockeyChallengeSecondPoints == null) {
+            jockeyChallengeSecondPoints = 2;
+        }
+        if (jockeyChallengeThirdPoints == null) {
+            jockeyChallengeThirdPoints = 1;
+        }
         if (createdBy == null || createdBy.isBlank()) {
             createdBy = "SYSTEM";
         }
@@ -134,22 +166,22 @@ public class Tournament {
         }
     }
 
-    public void replaceRounds(List<TournamentRound> newRounds) {
-        rounds.clear();
-        if (newRounds != null) {
-            newRounds.forEach(round -> {
-                round.setTournament(this);
-                rounds.add(round);
+    public void replaceRaces(List<Race> newRaces) {
+        races.clear();
+        if (newRaces != null) {
+            newRaces.forEach(race -> {
+                race.setTournament(this);
+                races.add(race);
             });
         }
     }
 
-    public void replacePrizes(List<TournamentPrize> newPrizes) {
-        prizes.clear();
+    public void replaceJockeyChallengePrizes(List<JockeyChallengePrize> newPrizes) {
+        jockeyChallengePrizes.clear();
         if (newPrizes != null) {
             newPrizes.forEach(prize -> {
                 prize.setTournament(this);
-                prizes.add(prize);
+                jockeyChallengePrizes.add(prize);
             });
         }
     }

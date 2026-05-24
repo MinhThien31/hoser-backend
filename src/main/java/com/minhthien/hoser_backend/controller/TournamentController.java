@@ -1,13 +1,11 @@
 package com.minhthien.hoser_backend.controller;
 
+import com.minhthien.hoser_backend.dto.request.RaceRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentRequest;
-import com.minhthien.hoser_backend.dto.request.TournamentPrizeRequest;
-import com.minhthien.hoser_backend.dto.request.TournamentRoundRequest;
 import com.minhthien.hoser_backend.dto.request.TournamentUpdateRequest;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
-import com.minhthien.hoser_backend.dto.response.TournamentPrizeResponse;
+import com.minhthien.hoser_backend.dto.response.RaceResponse;
 import com.minhthien.hoser_backend.dto.response.TournamentResponse;
-import com.minhthien.hoser_backend.dto.response.TournamentRoundResponse;
 import com.minhthien.hoser_backend.entity.User;
 import com.minhthien.hoser_backend.enums.TournamentStatus;
 import com.minhthien.hoser_backend.service.TournamentService;
@@ -44,22 +42,22 @@ public class TournamentController {
                 tournamentService.updateTournament(currentUser.getId(), id, request)));
     }
 
-    @PutMapping("/admin/tournaments/{id}/rounds")
-    public ResponseEntity<ApiResponse<TournamentResponse>> replaceTournamentRounds(
+    @PostMapping("/admin/tournaments/{id}/races")
+    public ResponseEntity<ApiResponse<TournamentResponse>> addTournamentRace(
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long id,
-            @Valid @RequestBody List<@Valid TournamentRoundRequest> requests) {
-        return ResponseEntity.ok(ApiResponse.success("Tournament rounds updated",
-                tournamentService.replaceTournamentRounds(currentUser.getId(), id, requests)));
+            @Valid @RequestBody RaceRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Tournament race created",
+                tournamentService.addTournamentRace(currentUser.getId(), id, request)));
     }
 
-    @PutMapping("/admin/tournaments/{id}/prizes")
-    public ResponseEntity<ApiResponse<TournamentResponse>> replaceTournamentPrizes(
+    @PutMapping("/admin/tournaments/{id}/races")
+    public ResponseEntity<ApiResponse<TournamentResponse>> replaceTournamentRaces(
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long id,
-            @Valid @RequestBody List<@Valid TournamentPrizeRequest> requests) {
-        return ResponseEntity.ok(ApiResponse.success("Tournament prizes updated",
-                tournamentService.replaceTournamentPrizes(currentUser.getId(), id, requests)));
+            @Valid @RequestBody List<@Valid RaceRequest> requests) {
+        return ResponseEntity.ok(ApiResponse.success("Tournament races updated",
+                tournamentService.replaceTournamentRaces(currentUser.getId(), id, requests)));
     }
 
     @PutMapping("/admin/tournaments/{id}/status")
@@ -108,13 +106,8 @@ public class TournamentController {
         return ResponseEntity.ok(ApiResponse.success(tournamentService.getPublicTournament(id)));
     }
 
-    @GetMapping("/tournaments/{id}/rounds")
-    public ResponseEntity<ApiResponse<List<TournamentRoundResponse>>> getPublicTournamentRounds(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(tournamentService.getPublicTournamentRounds(id)));
-    }
-
-    @GetMapping("/tournaments/{id}/prizes")
-    public ResponseEntity<ApiResponse<List<TournamentPrizeResponse>>> getPublicTournamentPrizes(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(tournamentService.getPublicTournamentPrizes(id)));
+    @GetMapping("/tournaments/{id}/races")
+    public ResponseEntity<ApiResponse<List<RaceResponse>>> getPublicTournamentRaces(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(tournamentService.getPublicTournamentRaces(id)));
     }
 }

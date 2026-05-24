@@ -1,14 +1,13 @@
 package com.minhthien.hoser_backend.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,14 +39,6 @@ public class TournamentRequest {
 
     private LocalDateTime checkInDeadlineAt;
 
-    @NotNull(message = "Entry fee is required")
-    @PositiveOrZero(message = "Entry fee must not be negative")
-    private BigDecimal entryFee = BigDecimal.ZERO;
-
-    @NotNull(message = "Deposit amount is required")
-    @PositiveOrZero(message = "Deposit amount must not be negative")
-    private BigDecimal depositAmount = BigDecimal.ZERO;
-
     @NotNull(message = "Minimum teams is required")
     @Positive(message = "Minimum teams must be greater than zero")
     private Integer minTeams;
@@ -56,9 +47,22 @@ public class TournamentRequest {
     @Positive(message = "Maximum teams must be greater than zero")
     private Integer maxTeams;
 
-    @Valid
-    private List<TournamentRoundRequest> rounds = new ArrayList<>();
+    @Schema(description = "Enable daily jockey challenge scoring for this race day", example = "true")
+    private Boolean jockeyChallengeEnabled = false;
+
+    @Positive(message = "First place points must be greater than zero")
+    @Schema(description = "Challenge points awarded to a jockey for rank 1 in each race", example = "3", defaultValue = "3")
+    private Integer jockeyChallengeFirstPoints = 3;
+
+    @Positive(message = "Second place points must be greater than zero")
+    @Schema(description = "Challenge points awarded to a jockey for rank 2 in each race", example = "2", defaultValue = "2")
+    private Integer jockeyChallengeSecondPoints = 2;
+
+    @Positive(message = "Third place points must be greater than zero")
+    @Schema(description = "Challenge points awarded to a jockey for rank 3 in each race", example = "1", defaultValue = "1")
+    private Integer jockeyChallengeThirdPoints = 1;
 
     @Valid
-    private List<TournamentPrizeRequest> prizes = new ArrayList<>();
+    @Schema(description = "Daily challenge prize config. Use [] when there is no challenge prize money.")
+    private List<JockeyChallengePrizeRequest> jockeyChallengePrizes = new ArrayList<>();
 }

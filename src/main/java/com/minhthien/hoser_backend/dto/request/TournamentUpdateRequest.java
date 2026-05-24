@@ -2,11 +2,9 @@ package com.minhthien.hoser_backend.dto.request;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,21 +29,23 @@ public class TournamentUpdateRequest {
 
     private LocalDateTime checkInDeadlineAt;
 
-    @PositiveOrZero(message = "Entry fee must not be negative")
-    private BigDecimal entryFee;
-
-    @PositiveOrZero(message = "Deposit amount must not be negative")
-    private BigDecimal depositAmount;
-
     @Positive(message = "Minimum teams must be greater than zero")
     private Integer minTeams;
 
     @Positive(message = "Maximum teams must be greater than zero")
     private Integer maxTeams;
 
-    @Valid
-    private List<TournamentRoundRequest> rounds;
+    private Boolean jockeyChallengeEnabled;
+
+    @Positive(message = "First place points must be greater than zero")
+    private Integer jockeyChallengeFirstPoints;
+
+    @Positive(message = "Second place points must be greater than zero")
+    private Integer jockeyChallengeSecondPoints;
+
+    @Positive(message = "Third place points must be greater than zero")
+    private Integer jockeyChallengeThirdPoints;
 
     @Valid
-    private List<TournamentPrizeRequest> prizes;
+    private List<JockeyChallengePrizeRequest> jockeyChallengePrizes;
 }

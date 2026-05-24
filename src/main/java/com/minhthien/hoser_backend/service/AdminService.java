@@ -1,5 +1,6 @@
 package com.minhthien.hoser_backend.service;
 
+import com.minhthien.hoser_backend.dto.response.AdminPayoutDebtSummaryResponse;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.enums.UserRole;
 
@@ -14,4 +15,5 @@ public interface AdminService {
     void activateAccount(Long userId);
     UserResponse updateUserStatus(Long userId, boolean active);
     UserResponse updateUserRole(Long userId, UserRole role);
+    AdminPayoutDebtSummaryResponse getPayoutDebts();
 }

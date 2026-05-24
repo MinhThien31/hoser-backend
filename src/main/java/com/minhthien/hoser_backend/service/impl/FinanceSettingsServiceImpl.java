@@ -1,10 +1,16 @@
 package com.minhthien.hoser_backend.service.impl;
 
 import com.minhthien.hoser_backend.dto.request.FinanceSettingsRequest;
+import com.minhthien.hoser_backend.dto.request.RacePrizeShareSettingRequest;
+import com.minhthien.hoser_backend.dto.request.RacePrizeShareSettingsRequest;
 import com.minhthien.hoser_backend.dto.response.FinanceSettingsResponse;
+import com.minhthien.hoser_backend.dto.response.RacePrizeShareSettingResponse;
+import com.minhthien.hoser_backend.dto.response.RacePrizeShareSettingsResponse;
 import com.minhthien.hoser_backend.entity.FinanceSettings;
+import com.minhthien.hoser_backend.entity.RacePrizeShareSetting;
 import com.minhthien.hoser_backend.exception.BadRequestException;
 import com.minhthien.hoser_backend.repository.FinanceSettingsRepository;
+import com.minhthien.hoser_backend.repository.RacePrizeShareSettingRepository;
 import com.minhthien.hoser_backend.service.FinanceSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +29,7 @@ public class FinanceSettingsServiceImpl implements FinanceSettingsService {
     private static final BigDecimal MAX_PERCENT = new BigDecimal("100.00");
 
     private final FinanceSettingsRepository financeSettingsRepository;
+    private final RacePrizeShareSettingRepository racePrizeShareSettingRepository;
 
     @Override
     @Transactional
@@ -50,6 +60,55 @@ public class FinanceSettingsServiceImpl implements FinanceSettingsService {
         return getOrCreateSettings().getJockeyHireTaxPercent();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public RacePrizeShareSettingsResponse getRacePrizeShareSettings() {
+        return mapRacePrizeShareSettings(racePrizeShareSettingRepository.findAllByOrderByRankAsc());
+    }
+
+    @Override
+    @Transactional
+    public RacePrizeShareSettingsResponse updateRacePrizeShareSettings(RacePrizeShareSettingsRequest request,
+                                                                       String updatedBy) {
+        if (request == null || request.getShares() == null) {
+            throw new BadRequestException("Race prize share settings request is required");
+        }
+        Set<Integer> ranks = new HashSet<>();
+        for (RacePrizeShareSettingRequest share : request.getShares()) {
+            if (share.getRank() == null || share.getRank() <= 0) {
+                throw new BadRequestException("Rank must be greater than zero");
+            }
+            if (!ranks.add(share.getRank())) {
+                throw new BadRequestException("Race prize share rank must be unique");
+            }
+            normalizePercent(share.getJockeyPercent());
+        }
+
+        racePrizeShareSettingRepository.deleteAllInBatch();
+        List<RacePrizeShareSetting> settings = request.getShares().stream()
+                .map(share -> RacePrizeShareSetting.builder()
+                        .rank(share.getRank())
+                        .jockeyPercent(normalizePercent(share.getJockeyPercent()))
+                        .createdBy(updatedBy)
+                        .updatedBy(updatedBy)
+                        .build())
+                .toList();
+        return mapRacePrizeShareSettings(racePrizeShareSettingRepository.saveAll(settings).stream()
+                .sorted((left, right) -> left.getRank().compareTo(right.getRank()))
+                .toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getRacePrizeJockeyPercent(Integer rank) {
+        if (rank == null) {
+            return BigDecimal.ZERO;
+        }
+        return racePrizeShareSettingRepository.findByRank(rank)
+                .map(RacePrizeShareSetting::getJockeyPercent)
+                .orElse(BigDecimal.ZERO);
+    }
+
     private FinanceSettings getOrCreateSettings() {
         return financeSettingsRepository.findById(FinanceSettings.SINGLETON_ID)
                 .orElseGet(() -> financeSettingsRepository.save(FinanceSettings.builder()
@@ -59,7 +118,7 @@ public class FinanceSettingsServiceImpl implements FinanceSettingsService {
     }
 
     private BigDecimal normalizePercent(BigDecimal percent) {
-        if (percent.compareTo(MIN_PERCENT) < 0 || percent.compareTo(MAX_PERCENT) > 0) {
+        if (percent == null || percent.compareTo(MIN_PERCENT) < 0 || percent.compareTo(MAX_PERCENT) > 0) {
             throw new BadRequestException("Jockey hire tax percent must be between 0 and 100");
         }
         return percent.setScale(2, RoundingMode.HALF_UP);
@@ -70,6 +129,23 @@ public class FinanceSettingsServiceImpl implements FinanceSettingsService {
                 .jockeyHireTaxPercent(settings.getJockeyHireTaxPercent())
                 .createdAt(settings.getCreatedAt())
                 .updatedAt(settings.getUpdatedAt())
+                .build();
+    }
+
+    private RacePrizeShareSettingsResponse mapRacePrizeShareSettings(List<RacePrizeShareSetting> settings) {
+        return RacePrizeShareSettingsResponse.builder()
+                .shares(settings.stream()
+                        .map(this::mapRacePrizeShareSetting)
+                        .toList())
+                .build();
+    }
+
+    private RacePrizeShareSettingResponse mapRacePrizeShareSetting(RacePrizeShareSetting setting) {
+        BigDecimal jockeyPercent = normalizePercent(setting.getJockeyPercent());
+        return RacePrizeShareSettingResponse.builder()
+                .rank(setting.getRank())
+                .jockeyPercent(jockeyPercent)
+                .ownerPercent(MAX_PERCENT.subtract(jockeyPercent).setScale(2, RoundingMode.HALF_UP))
                 .build();
     }
 }

@@ -4,7 +4,6 @@ import com.minhthien.hoser_backend.enums.TournamentStatus;
 import lombok.Builder;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,15 +19,19 @@ public class TournamentResponse {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     private LocalDateTime checkInDeadlineAt;
-    private BigDecimal entryFee;
-    private BigDecimal depositAmount;
     private Integer minTeams;
     private Integer maxTeams;
     private TournamentStatus status;
     private LocalDateTime publishedAt;
     private LocalDateTime openedRegistrationAt;
-    private List<TournamentRoundResponse> rounds;
-    private List<TournamentPrizeResponse> prizes;
+    private Boolean jockeyChallengeEnabled;
+    private Integer jockeyChallengeFirstPoints;
+    private Integer jockeyChallengeSecondPoints;
+    private Integer jockeyChallengeThirdPoints;
+    private LocalDateTime jockeyChallengeFinalizedAt;
+    private Long jockeyChallengeFinalizedBy;
+    private List<RaceResponse> races;
+    private List<JockeyChallengePrizeResponse> jockeyChallengePrizes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;

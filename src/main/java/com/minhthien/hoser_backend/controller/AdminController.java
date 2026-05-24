@@ -1,6 +1,7 @@
 package com.minhthien.hoser_backend.controller;
 
 import com.minhthien.hoser_backend.dto.request.UserRoleRequest;
+import com.minhthien.hoser_backend.dto.response.AdminPayoutDebtSummaryResponse;
 import com.minhthien.hoser_backend.dto.response.ApiResponse;
 import com.minhthien.hoser_backend.dto.response.UserResponse;
 import com.minhthien.hoser_backend.service.AdminService;
@@ -58,5 +59,10 @@ public class AdminController {
             @Valid @RequestBody UserRoleRequest request) {
         UserResponse response = adminService.updateUserRole(userId, request.getRole());
         return ResponseEntity.ok(ApiResponse.success("User role updated", response));
+    }
+
+    @GetMapping("/admin/payout-debts")
+    public ResponseEntity<ApiResponse<AdminPayoutDebtSummaryResponse>> getPayoutDebts() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getPayoutDebts()));
     }
 }
